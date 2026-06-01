@@ -2,7 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover"/>
 <meta name="theme-color" content="#0f172a"/>
 <meta name="apple-mobile-web-app-capable" content="yes"/>
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
@@ -418,6 +418,9 @@ ta.oninput = function() {
   sendTyping(true);
   clearTimeout(typingTimer);
   typingTimer = setTimeout(() => sendTyping(false), 2000);
+  /* גלילה לתחתית כשמקלידים תשובה */
+  const c = document.getElementById("msgs-container");
+  c.scrollTop = c.scrollHeight;
 };
 ta.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
 /* emoji buttons */
@@ -569,6 +572,7 @@ function openChat(phone) {
   typingListener = onValue(ref(db, `clients/${phone}/typing`), snap => {
     const data = snap.val();
     const row = document.getElementById("typing-row");
+    const container = document.getElementById("msgs-container");
     if (data?.active && data?.text) {
       row.classList.add("show");
       row.querySelector(".typing-lbl").textContent = `מקליד: "${data.text.slice(0, 30)}${data.text.length > 30 ? "..." : ""}"`;
@@ -578,6 +582,8 @@ function openChat(phone) {
     } else {
       row.classList.remove("show");
     }
+    /* גלילה אוטומטית כשמקלידים */
+    setTimeout(() => { container.scrollTop = container.scrollHeight; }, 30);
   });
 
   /* האזנה לנוכחות */
@@ -598,6 +604,11 @@ function openChat(phone) {
 
   showScreen("s-chat");
   document.getElementById("chat-ta").focus();
+  /* גלילה לתחתית בפתיחה */
+  setTimeout(() => {
+    const c = document.getElementById("msgs-container");
+    c.scrollTop = c.scrollHeight;
+  }, 100);
 }
 
 /* ── רינדור הודעות ── */
@@ -701,7 +712,9 @@ function renderMsgs(msgs) {
     if (!isAgent && !m.agentRead) set(ref(db, `clients/${curPhone}/messages/${key}/agentRead`), true);
   });
 
-  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 50);
+  /* גלילה מיידית לתחתית */
+  container.scrollTop = container.scrollHeight;
+  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 60);
 }
 
 /* ── שליחת הודעה ── */
