@@ -640,20 +640,33 @@ function renderMsgs(msgs) {
     if (isAgent && !m.deleted) {
       if (m.clientRead) {
         statusHtml = `<span class="msg-status seen" title="נקרא ${m.clientReadAt ? fmtDate(m.clientReadAt) : ""}">
-          <svg width="14" height="10" viewBox="0 0 16 12" fill="none"><path d="M1 6l4 4L15 1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M5 6l4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          <svg width="18" height="11" viewBox="0 0 18 11" fill="none">
+            <path d="M1 5.5l3.5 3.5L11 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M6 5.5l3.5 3.5L16 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
           ${m.clientReadAt ? fmtDate(m.clientReadAt) : ""}
         </span>`;
       } else {
-        statusHtml = `<span class="msg-status"><svg width="12" height="10" viewBox="0 0 16 12" fill="none"><path d="M1 6l4 4L15 1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`;
+        statusHtml = `<span class="msg-status">
+          <svg width="12" height="11" viewBox="0 0 12 11" fill="none">
+            <path d="M1 5.5l3.5 3.5L11 2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </span>`;
       }
     }
 
     /* reactions */
     const reactions = m.reactions || {};
     const reactionGroups = {};
-    Object.values(reactions).forEach(r => { reactionGroups[r.emoji] = (reactionGroups[r.emoji] || 0) + 1; });
+    Object.entries(reactions).forEach(([, r]) => {
+      if (!reactionGroups[r.emoji]) reactionGroups[r.emoji] = { count: 0, byMe: false };
+      reactionGroups[r.emoji].count++;
+      if (r.by === "agent") reactionGroups[r.emoji].byMe = true;
+    });
     const reactionsHtml = Object.entries(reactionGroups).length
-      ? `<div class="msg-reactions">${Object.entries(reactionGroups).map(([emoji, count]) => `<div class="reaction-chip">${emoji}<span class="reaction-count">${count > 1 ? count : ""}</span></div>`).join("")}</div>`
+      ? `<div class="msg-reactions">${Object.entries(reactionGroups).map(([emoji, d]) =>
+          `<div class="reaction-chip ${d.byMe ? "mine" : ""}" onclick="toggleReaction('${key}','${emoji}')">${emoji}<span class="reaction-count">${d.count > 1 ? d.count : ""}</span></div>`
+        ).join("")}</div>`
       : "";
 
     /* starred */
@@ -742,10 +755,23 @@ function copyMsg(msg) { navigator.clipboard?.writeText(msg.text).then(() => toas
 
 async function addReaction(emoji) {
   if (!ctxMsgKey || !curPhone) return;
-  const key = `r_agent`;
-  await set(ref(db, `clients/${curPhone}/messages/${ctxMsgKey}/reactions/${key}`), { emoji, by: "agent", at: Date.now() });
-  closeCtx(); toast(`${emoji} נוסף`);
+  await toggleReaction(ctxMsgKey, emoji);
+  closeCtx();
 }
+
+async function toggleReaction(msgKey, emoji) {
+  if (!curPhone || !msgKey) return;
+  const snap = await get(ref(db, `clients/${curPhone}/messages/${msgKey}/reactions/r_agent`));
+  if (snap.exists() && snap.val().emoji === emoji) {
+    /* מסיר את ה-reaction */
+    await remove(ref(db, `clients/${curPhone}/messages/${msgKey}/reactions/r_agent`));
+    toast(`${emoji} הוסר`);
+  } else {
+    await set(ref(db, `clients/${curPhone}/messages/${msgKey}/reactions/r_agent`), { emoji, by: "agent", at: Date.now() });
+    toast(`${emoji} נוסף`);
+  }
+}
+window.toggleReaction = toggleReaction;
 
 async function starMsg(key, msg) {
   const cur = msg.starred || false;
