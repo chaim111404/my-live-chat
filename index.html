@@ -1063,7 +1063,7 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       }
       /* רושם נציג פעיל */
       const myId = JSON.parse(localStorage.getItem("wdc_admin_session")||"{}").userId || "admin";
-      await set(ref(db, "clients/"+phone+"/activeAgent"), {id: myId, name: currentUser?.name || "נציג", at: Date.now()});
+      await set(ref(db, "clients/"+phone+"/activeAgent"), {id: myId, name: (typeof currentUser!=="undefined"&&currentUser?.name) || ADMIN_USER || "נציג", at: Date.now()});
       /* heartbeat */
       const hb = setInterval(async () => {
         if (!chatPhone) { clearInterval(hb); return; }
@@ -1144,7 +1144,7 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
         const url = await getDownloadURL(snapshot.ref);
         const key = "msg_" + Date.now();
         const msg = { text:"", imageUrl:url, at:Date.now(), sender:"agent",
-          agentRead:true, clientRead:false, agentName:currentUser?.name||"נציג", type:"image" };
+          agentRead:true, clientRead:false, agentName:(typeof currentUser!=="undefined"&&currentUser?.name)||ADMIN_USER||"נציג", type:"image" };
         if (replyTo) { msg.replyTo = { text:"📷 תמונה", sender:replyTo.sender }; cancelReply(); }
         await set(ref(db,"clients/"+curPhone+"/messages/"+key), msg);
         toast("✓ תמונה נשלחה");
