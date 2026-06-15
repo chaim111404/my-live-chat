@@ -227,6 +227,21 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
     
   
     .msg-img { max-width:220px; max-height:220px; border-radius:14px; object-fit:cover; cursor:pointer; display:block; margin-top:4px; }
+    .img-lightbox img { transform-origin:center; will-change:transform; }
+    .ot-receive{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--p)}
+    .ot-sent,.ot-opened{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-style:italic;opacity:.7}
+    .cimg-preview{display:none;position:fixed;inset:0;background:rgba(8,18,32,.96);z-index:9500;flex-direction:column}
+    .cimg-preview.show{display:flex}
+    .cimg-top{display:flex;align-items:center;justify-content:space-between;padding:calc(var(--safe-top)+14px) 18px 14px;color:#fff;font-size:16px;font-weight:700}
+    .cimg-x,.cimg-ot{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:40px;height:40px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
+    .cimg-ot.active{background:var(--p);box-shadow:0 0 0 3px rgba(14,165,233,.3)}
+    .cimg-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px}
+    .cimg-wrap img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px}
+    .cimg-bottom{display:flex;align-items:center;gap:10px;padding:14px 16px calc(14px + var(--safe-bot))}
+    .cimg-caption{flex:1;background:rgba(255,255,255,.1);border:none;border-radius:22px;padding:12px 18px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;outline:none}
+    .cimg-caption::placeholder{color:rgba(255,255,255,.5)}
+    .cimg-send{background:var(--p);border:none;border-radius:50%;width:48px;height:48px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .cimg-send:disabled{opacity:.5}
     .img-lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.94); z-index:900; align-items:center; justify-content:center; }
     .img-lightbox.show { display:flex; animation:fadeIn .2s ease; }
     .img-lightbox img { max-width:95vw; max-height:95vh; object-fit:contain; border-radius:12px; }
@@ -755,9 +770,15 @@ function renderMsgs(msgs) {
 
     /* bubble */
     const bubbleText = m.deleted
-      ? `<span class="msg-deleted">🚫 ההודעה נמחקה</span>`
+      ? `<span class="msg-deleted">🚫 ${m.type === "image" ? "התמונה נמחקה" : "ההודעה נמחקה"}</span>`
       : (m.type === "image" && m.imageUrl)
-        ? `<img class="msg-img" src="${m.imageUrl}" data-url="${m.imageUrl}" onclick="openLightbox('${m.imageUrl}')" alt="תמונה" loading="lazy"/>`
+        ? (() => {
+            const mineImg = isAgent;
+            if (m.oneTime && !mineImg && m.viewed) return `<span class="ot-opened">נפתחה</span>`;
+            if (m.oneTime && !mineImg && !m.viewed) return `<span class="ot-receive">🔁 תמונה חד-פעמית · הקש לצפייה</span>`;
+            if (m.oneTime && mineImg) return `<span class="ot-sent">🔁 ${m.viewed ? "נצפתה" : "תמונה חד-פעמית"}</span>`;
+            return `<img class="msg-img" src="${m.imageUrl}" data-url="${m.imageUrl}" alt="תמונה" loading="lazy"/>${m.text ? `<div style="font-size:13px;margin-top:4px">${m.text}</div>` : ""}`;
+          })()
         : `${m.text}${m.edited ? `<span class="msg-edited">(נערך)</span>` : ""}`;
 
     /* status */
@@ -816,7 +837,20 @@ function renderMsgs(msgs) {
       </div>`;
 
     /* לחיצה על bubble */
-    row.querySelector(".msg-bubble").addEventListener("click", () => { if (!m.deleted) openCtx(key, m, isAgent); });
+    const bubEl = row.querySelector(".msg-bubble");
+    const isImgM = m.type === "image" && m.imageUrl && !m.deleted;
+    if (isImgM) {
+      let lpt = null, lpf = false;
+      const sLP = () => { lpf = false; lpt = setTimeout(() => { lpf = true; openCtx(key, m, isAgent); }, 500); };
+      const cLP = () => { if (lpt) clearTimeout(lpt); };
+      bubEl.addEventListener("click", e => { if (lpf) { e.preventDefault(); return; } if (m.oneTime) openOneTimeImg(key, m, isAgent); else openLightbox(m.imageUrl); });
+      bubEl.addEventListener("contextmenu", e => { e.preventDefault(); openCtx(key, m, isAgent); });
+      bubEl.addEventListener("touchstart", sLP, { passive: true });
+      bubEl.addEventListener("touchend", cLP);
+      bubEl.addEventListener("touchmove", cLP);
+    } else {
+      bubEl.addEventListener("click", () => { if (!m.deleted) openCtx(key, m, isAgent); });
+    }
 
     /* swipe לתגובה */
     let touchStartX = 0;
@@ -866,10 +900,10 @@ async function sendTyping(active) {
 function openCtx(key, msg, isAgent) {
   ctxMsgKey = key; ctxMsgData = msg;
   const preview = document.getElementById("ctx-preview");
-  preview.textContent = msg.text;
+  preview.textContent = msg.type === "image" ? "📷 תמונה" : msg.text;
   preview.className = `ctx-bubble-preview ${isAgent ? "" : "them"}`;
-  /* הצגת עריכה רק להודעות נציג שאינן ישנות מדי */
-  const canEdit = isAgent && (Date.now() - msg.at) < EDIT_WINDOW_MS;
+  /* הצגת עריכה רק להודעות נציג טקסט שאינן ישנות מדי */
+  const canEdit = isAgent && msg.type !== "image" && (Date.now() - msg.at) < EDIT_WINDOW_MS;
   document.getElementById("as-edit").style.display = canEdit ? "" : "none";
   document.getElementById("ctx-overlay").classList.add("show");
 }
@@ -1118,38 +1152,68 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
     checkPermNotify();
     
 
-    /* ══ תמונות בצ'אט מובייל ══ */
+    /* ══ תמונות בצ'אט מובייל — זום, preview, חד-פעמי ══ */
+    let clbScale=1,clbX=0,clbY=0,clbSD=0,clbSS=1,clbLX=0,clbLY=0;
+    function clbApply(){const i=document.getElementById("lightbox-img");if(i)i.style.transform=`translate(${clbX}px,${clbY}px) scale(${clbScale})`;}
+    function clbReset(){clbScale=1;clbX=0;clbY=0;clbApply();}
     window.openLightbox = (url) => {
       document.getElementById("lightbox-img").src = url;
+      clbReset();
       document.getElementById("img-lightbox").classList.add("show");
     };
+    (function initClbZoom(){
+      const lb=document.getElementById("img-lightbox"),img=document.getElementById("lightbox-img");
+      if(!lb||!img)return;
+      img.addEventListener("dblclick",e=>{e.stopPropagation();clbScale=clbScale>1?1:2.5;clbX=0;clbY=0;clbApply();});
+      img.addEventListener("touchstart",e=>{if(e.touches.length===2){clbSD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);clbSS=clbScale;}else if(e.touches.length===1&&clbScale>1){clbLX=e.touches[0].clientX;clbLY=e.touches[0].clientY;}},{passive:true});
+      img.addEventListener("touchmove",e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);clbScale=Math.min(5,Math.max(1,clbSS*(d/clbSD)));if(clbScale===1){clbX=0;clbY=0;}clbApply();}else if(e.touches.length===1&&clbScale>1){e.preventDefault();clbX+=e.touches[0].clientX-clbLX;clbY+=e.touches[0].clientY-clbLY;clbLX=e.touches[0].clientX;clbLY=e.touches[0].clientY;clbApply();}},{passive:false});
+      lb.addEventListener("click",e=>{if(e.target===lb){lb.classList.remove("show");clbReset();}});
+      img.addEventListener("click",e=>e.stopPropagation());
+    })();
 
+    window.openOneTimeImg = async (key,m,isAgent) => {
+      if(m.viewed && !isAgent){ toast("התמונה כבר נצפתה"); return; }
+      openLightbox(m.imageUrl);
+      if(!isAgent && !m.viewed){
+        await set(ref(db,`clients/${curPhone}/messages/${key}/viewed`),true);
+        await set(ref(db,`clients/${curPhone}/messages/${key}/viewedAt`),Date.now());
+      }
+    };
+
+    let cPendingFile=null, cPendingOneTime=false;
     document.getElementById("chat-img-btn").onclick = () => {
       document.getElementById("chat-file-input").click();
     };
-
-    document.getElementById("chat-file-input").onchange = async (e) => {
+    document.getElementById("chat-file-input").onchange = (e) => {
       const file = e.target.files[0];
       if (!file || !curPhone) return;
       e.target.value = "";
       if (!file.type.startsWith("image/")) { toast("ניתן להעלות תמונות בלבד"); return; }
       if (file.size > 10 * 1024 * 1024) { toast("הקובץ גדול מדי — מקסימום 10MB"); return; }
-      const btn = document.getElementById("send-btn");
-      btn.disabled = true;
-      try {
-        const ext = file.name.split('.').pop() || 'jpg';
-        const path = "chat-images/" + curPhone + "/" + Date.now() + "." + ext;
-        const storageRef = sRef(storage, path);
-        const snapshot = await uploadBytes(storageRef, file);
-        const url = await getDownloadURL(snapshot.ref);
-        const key = "msg_" + Date.now();
-        const msg = { text:"", imageUrl:url, at:Date.now(), sender:"agent",
-          agentRead:true, clientRead:false, agentName:(typeof currentUser!=="undefined"&&currentUser?.name)||ADMIN_USER||"נציג", type:"image" };
-        if (replyTo) { msg.replyTo = { text:"📷 תמונה", sender:replyTo.sender }; cancelReply(); }
-        await set(ref(db,"clients/"+curPhone+"/messages/"+key), msg);
+      cPendingFile=file; cPendingOneTime=false;
+      const r=new FileReader();
+      r.onload=ev=>{document.getElementById("cimg-thumb").src=ev.target.result;document.getElementById("cimg-onetime").classList.remove("active");document.getElementById("cimg-caption").value="";document.getElementById("cimg-preview").classList.add("show");};
+      r.readAsDataURL(file);
+    };
+    window.cCancelPreview=()=>{cPendingFile=null;cPendingOneTime=false;document.getElementById("cimg-preview").classList.remove("show");};
+    window.cToggleOneTime=()=>{cPendingOneTime=!cPendingOneTime;document.getElementById("cimg-onetime").classList.toggle("active",cPendingOneTime);};
+    window.cSendImg=async()=>{
+      if(!cPendingFile||!curPhone)return;
+      const file=cPendingFile, caption=document.getElementById("cimg-caption").value.trim(), oneTime=cPendingOneTime;
+      const sb=document.getElementById("cimg-send"); sb.disabled=true;
+      cCancelPreview();
+      try{
+        const ext=file.name.split('.').pop()||'jpg';
+        const snapshot=await uploadBytes(sRef(storage,"chat-images/"+curPhone+"/"+Date.now()+"."+ext),file);
+        const url=await getDownloadURL(snapshot.ref);
+        const key="msg_"+Date.now();
+        const msg={text:caption||"",imageUrl:url,at:Date.now(),sender:"agent",agentRead:true,clientRead:false,agentName:(typeof currentUser!=="undefined"&&currentUser?.name)||ADMIN_USER||"נציג",type:"image"};
+        if(oneTime){msg.oneTime=true;msg.viewed=false;}
+        if(replyTo){msg.replyTo={text:"📷 תמונה",sender:replyTo.sender};cancelReply();}
+        await set(ref(db,"clients/"+curPhone+"/messages/"+key),msg);
         toast("✓ תמונה נשלחה");
-      } catch(err) { toast("שגיאה בהעלאה"); console.error(err); }
-      finally { btn.disabled = false; }
+      }catch(err){toast("שגיאה בהעלאה");console.error(err);}
+      finally{sb.disabled=false;}
     };
 
 /* ── מודול אופליין (#8): באנר + חסימת פעולות בזמן אין אינטרנט ── */
@@ -1206,6 +1270,18 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
     <div style="color:#fff;font-size:20px;font-weight:800" id="ls-name">התחברת בהצלחה</div>
     <div style="color:#7fb8e0;font-size:14px">מתחבר...</div>
   </div>
+<div class="cimg-preview" id="cimg-preview">
+  <div class="cimg-top">
+    <button class="cimg-x" onclick="cCancelPreview()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <span>שליחת תמונה</span>
+    <button class="cimg-ot" id="cimg-onetime" onclick="cToggleOneTime()" title="צפייה חד-פעמית"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="11" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg></button>
+  </div>
+  <div class="cimg-wrap"><img id="cimg-thumb" src="" alt="תצוגה"/></div>
+  <div class="cimg-bottom">
+    <input type="text" id="cimg-caption" class="cimg-caption" placeholder="הוסף כיתוב (אופציונלי)..."/>
+    <button class="cimg-send" id="cimg-send" onclick="cSendImg()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
+  </div>
+</div>
 
 </body>
 </html>
