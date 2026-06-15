@@ -635,14 +635,17 @@ function openChat(phone) {
   presenceListener = onValue(ref(db, `clients/${phone}/presence`), snap => {
     const p = snap.val();
     const statusEl = document.getElementById("chat-status");
-    if (p?.online) {
-      statusEl.textContent = "מחובר עכשיו";
+    if (p?.online && p?.chatOpen) {
+      statusEl.textContent = "מחובר לצ'אט";
+      statusEl.style.color = "var(--ok)";
+    } else if (p?.online) {
+      statusEl.textContent = "מחובר לאתר";
       statusEl.style.color = "var(--ok)";
     } else if (p?.lastSeen) {
-      statusEl.textContent = `נראה לאחרונה ${fmtDate(p.lastSeen)}`;
+      statusEl.textContent = `נראה לאחרונה ${fmtSeen(p.lastSeen)}`;
       statusEl.style.color = "var(--txt3)";
     } else {
-      statusEl.textContent = "אופלין";
+      statusEl.textContent = "אופליין";
       statusEl.style.color = "var(--txt3)";
     }
   });
@@ -865,13 +868,12 @@ async function saveEdit() {
 async function confirmDeleteChat() {
   if (!curPhone) return;
   const name = allClients[curPhone]?.name || curPhone;
-  /* confirm sheet פשוט */
-  const ok = confirm(`מחק את כל השיחה עם ${name}?\nפעולה זו תמחק מהשרת לצמיתות.`);
-  if (!ok) return;
-  try {
-    await remove(ref(db, `clients/${curPhone}/messages`));
-    toast("השיחה נמחקה מהשרת ✓");
-  } catch(e) { toast("שגיאה במחיקה"); }
+  showConfirmSheet("מחיקת שיחה", `למחוק את כל השיחה עם ${name}? הפעולה תמחק מהשרת לצמיתות.`, async () => {
+    try {
+      await remove(ref(db, `clients/${curPhone}/messages`));
+      toast("השיחה נמחקה מהשרת ✓");
+    } catch(e) { toast("שגיאה במחיקה"); }
+  });
 }
 
 async function toggleStarChat() {
@@ -918,9 +920,25 @@ function goBack() { if (curListener) { curListener(); curListener = null; } if (
 function showScreen(id) { document.querySelectorAll(".screen").forEach(s => s.classList.remove("active")); document.getElementById(id).classList.add("active"); }
 function closeSheet(id) { document.getElementById(id).classList.remove("show"); }
 function toast(msg) { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.getElementById("toast-wrap").appendChild(el); setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 2500); }
+
+/* חלון אישור מותאם (#28) */
+function showConfirmSheet(title, text, onOk) {
+  const ov = document.getElementById("confirm-overlay");
+  document.getElementById("confirm-title").textContent = title;
+  document.getElementById("confirm-text").textContent = text;
+  const okBtn = document.getElementById("confirm-ok");
+  const cancelBtn = document.getElementById("confirm-cancel");
+  const close = () => ov.classList.remove("show");
+  okBtn.onclick = () => { close(); onOk?.(); };
+  cancelBtn.onclick = close;
+  ov.onclick = e => { if (e.target === ov) close(); };
+  ov.classList.add("show");
+}
 function fmtPhone(p) { const s = String(p).replace(/\D/g, ""); return s.length === 10 ? s.slice(0, 3) + "-" + s.slice(3) : s; }
 function fmtTime(ts) { return new Date(ts).toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit" }); }
 function fmtDate(ts) { if (!ts) return ""; const d = new Date(ts); const today = new Date(); if (d.toDateString() === today.toDateString()) return fmtTime(ts); return d.toLocaleDateString("he-IL"); }
+/* תאריך יחסי: היום / אתמול / שלשום / תאריך מלא עם שנה (#17/#24) */
+function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = new Date(); const tm = fmtTime(ts); const sod = x => { const t = new Date(x); t.setHours(0,0,0,0); return t.getTime(); }; const days = Math.round((sod(now) - sod(d)) / 864e5); if (days === 0) return `היום ${tm}`; if (days === 1) return `אתמול ${tm}`; if (days === 2) return `שלשום ${tm}`; return `${d.toLocaleDateString("he-IL",{day:"2-digit",month:"2-digit",year:"numeric"})} ${tm}`; }
 
     /* ── אווטרים ── */
     const AV_BASE = "https://api.dicebear.com/7.x/avataaars/svg";
@@ -1076,6 +1094,16 @@ function fmtDate(ts) { if (!ts) return ""; const d = new Date(ts); const today =
       </div>
       <button id="rating-skip" style="background:none;border:none;color:var(--txt3);font-family:'Heebo',sans-serif;font-size:14px;cursor:pointer;padding:8px;width:100%">דלג</button>
     </div>
+  </div>  <!-- ════ CONFIRM SHEET (#28) ════ -->
+  <div class="sheet-overlay" id="confirm-overlay">
+    <div class="action-sheet" style="padding:24px 24px calc(24px + var(--safe-bot))">
+      <div class="as-handle"></div>
+      <div id="confirm-title" style="font-size:17px;font-weight:800;text-align:center;margin-bottom:8px"></div>
+      <div id="confirm-text" style="font-size:14px;color:var(--txt3);text-align:center;line-height:1.6;margin-bottom:22px"></div>
+      <button id="confirm-ok" style="width:100%;background:var(--err);border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:14px;cursor:pointer;margin-bottom:10px">אישור</button>
+      <button id="confirm-cancel" style="width:100%;background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:14px;cursor:pointer">ביטול</button>
+    </div>
   </div>
+
 </body>
 </html>
