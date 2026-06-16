@@ -386,6 +386,7 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
   </div>
   <!-- reply bar -->
   <div class="reply-bar" id="reply-bar">
+    <img id="reply-bar-thumb" style="display:none;width:38px;height:38px;border-radius:8px;object-fit:cover;flex-shrink:0;margin-left:8px" alt=""/>
     <div class="reply-bar-content">
       <div class="reply-bar-name" id="reply-bar-name"></div>
       <div class="reply-bar-text" id="reply-bar-text"></div>
@@ -971,7 +972,7 @@ function renderMsgs(msgs) {
     /* reply preview */
     let replyHtml = "";
     if (m.replyTo) {
-      replyHtml = `<div class="reply-preview"><div class="reply-preview-name">${m.replyTo.sender === "agent" ? "אתה" : "לקוח"}</div><div class="reply-preview-text">${m.replyTo.text}</div></div>`;
+      replyHtml = `<div class="reply-preview" style="display:flex;align-items:center;gap:8px">${m.replyTo.type === "image" && m.replyTo.imageUrl ? `<img src="${m.replyTo.imageUrl}" style="width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0" alt=""/>` : ""}<div style="min-width:0;flex:1"><div class="reply-preview-name">${m.replyTo.sender === "agent" ? "אתה" : "לקוח"}</div><div class="reply-preview-text">${m.replyTo.type === "image" ? (m.replyTo.text || "תמונה") : m.replyTo.text}</div></div></div>`;
     }
 
     /* bubble */
@@ -1121,7 +1122,7 @@ async function sendMsg() {
   try {
     const key = `msg_${Date.now()}`;
     const msg = { text, at: Date.now(), sender: "agent", agentRead: true, clientRead: false, agentName: (typeof currentUser!=="undefined"&&currentUser?.name) || ADMIN_USER || "נציג" };
-    if (replyTo) { msg.replyTo = { text: replyTo.text.slice(0, 80), sender: replyTo.sender }; cancelReply(); }
+    if (replyTo) { msg.replyTo = buildReplyMeta(replyTo); cancelReply(); }
     await set(ref(db, `clients/${curPhone}/messages/${key}`), msg);
     /* #2 — סימון מי פתח (אם אין עדיין) */
     try{const ob=await get(ref(db,`clients/${curPhone}/openedBy`));if(!ob.exists())await set(ref(db,`clients/${curPhone}/openedBy`),{role:"agent",name:(typeof currentUser!=="undefined"&&currentUser?.name)||ADMIN_USER||"נציג",at:Date.now()});}catch(_){}
@@ -1156,11 +1157,27 @@ function setReply(key, msg) {
   replyTo = msg; replyTo.key = key;
   const bar = document.getElementById("reply-bar");
   document.getElementById("reply-bar-name").textContent = msg.sender === "agent" ? "אתה" : allClients[curPhone]?.name || "לקוח";
-  document.getElementById("reply-bar-text").textContent = msg.text.slice(0, 60);
+  /* תצוגה מקדימה: תמונה ממוזערת + טקסט (#reply לתמונה) */
+  const thumb = document.getElementById("reply-bar-thumb");
+  const isImg = msg.type === "image" && msg.imageUrl;
+  if (isImg) {
+    thumb.src = msg.imageUrl; thumb.style.display = "block";
+    document.getElementById("reply-bar-text").textContent = msg.text ? msg.text.slice(0, 60) : "תמונה";
+  } else {
+    thumb.style.display = "none"; thumb.src = "";
+    document.getElementById("reply-bar-text").textContent = (msg.text || "").slice(0, 60);
+  }
   bar.classList.add("show");
   document.getElementById("chat-ta").focus();
 }
-function cancelReply() { replyTo = null; document.getElementById("reply-bar").classList.remove("show"); }
+function cancelReply() { replyTo = null; document.getElementById("reply-bar").classList.remove("show"); const t=document.getElementById("reply-bar-thumb"); if(t){t.style.display="none";t.src="";} }
+/* בונה אובייקט reply עם תמונה ממוזערת אם רלוונטי (#reply לתמונה) */
+function buildReplyMeta(r) {
+  const meta = { sender: r.sender };
+  if (r.type === "image" && r.imageUrl) { meta.type = "image"; meta.imageUrl = r.imageUrl; meta.text = r.text ? r.text.slice(0, 80) : ""; }
+  else { meta.text = (r.text || "").slice(0, 80); }
+  return meta;
+}
 
 function copyMsg(msg) { navigator.clipboard?.writeText(msg.text).then(() => toast("הועתק ✓")); }
 
@@ -1522,7 +1539,7 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
         const key="msg_"+Date.now();
         const msg={text:caption||"",imageUrl:url,at:Date.now(),sender:"agent",agentRead:true,clientRead:false,agentName:(typeof currentUser!=="undefined"&&currentUser?.name)||ADMIN_USER||"נציג",type:"image"};
         if(oneTime){msg.oneTime=true;msg.viewed=false;}
-        if(replyTo){msg.replyTo={text:"📷 תמונה",sender:replyTo.sender};cancelReply();}
+        if(replyTo){msg.replyTo=buildReplyMeta(replyTo);cancelReply();}
         await set(ref(db,"clients/"+curPhone+"/messages/"+key),msg);
         pend.remove(); /* יוחלף בהודעה האמיתית מה-listener */
         toast("✓ תמונה נשלחה");
