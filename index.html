@@ -217,6 +217,10 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 .msg-bubble{-webkit-user-select:none;user-select:none}
 /* swipe animation */
 .conv-item{transform:translateX(0);transition:transform .2s ease}
+/* אינדיקציית swipe-to-reply על בועה (#4) */
+.msg-row{position:relative}
+.msg-row .msg-bubble{will-change:transform}
+.msg-row.swiping-reply .msg-bubble{box-shadow:0 0 0 2px var(--p,#3b82f6)}
 
     .rating-overlay{display:none;position:fixed;inset:0;background:rgba(12,26,46,.8);backdrop-filter:blur(6px);z-index:900;align-items:flex-end;justify-content:center}
     .rating-overlay.show{display:flex;animation:fadeIn .2s ease}
@@ -826,6 +830,19 @@ function openChat(phone) {
 
   curListener = onValue(ref(db, `clients/${phone}/messages`), snap => renderMsgs(snap.val() || {}));
 
+  /* סימון כנקרא — רק עכשיו, כשהמשתמש פתח את הצ'אט בפועל (#7) */
+  (async () => {
+    try {
+      const snap = await get(ref(db, `clients/${phone}/messages`));
+      const all = snap.val() || {};
+      Object.entries(all).forEach(([key, m]) => {
+        if ((m.sender === "client" || !m.sender) && !m.agentRead) {
+          set(ref(db, `clients/${phone}/messages/${key}/agentRead`), true);
+        }
+      });
+    } catch (e) { console.error(e); }
+  })();
+
   /* האזנה לטקסט שהלקוח מקליד */
   typingListener = onValue(ref(db, `clients/${phone}/typing`), snap => {
     const data = snap.val();
@@ -917,7 +934,7 @@ function renderMsgs(msgs) {
     /* bubble */
     const bubbleText = m.deleted
       ? `<span class="msg-deleted">🚫 ${m.type === "image" ? "התמונה נמחקה" : "ההודעה נמחקה"}</span>`
-      : (m.type === "image" && m.imageUrl)
+      : (m.type === "image" && (m.imageUrl || (m.oneTime && m.viewed)))
         ? (() => {
             const mineImg = isAgent;
             if (m.oneTime && !mineImg && m.viewed) return `<span class="ot-opened">נפתחה</span>`;
@@ -962,7 +979,7 @@ function renderMsgs(msgs) {
       : "";
 
     /* starred */
-    const starHtml = m.starred ? `<span style="font-size:12px;margin-right:4px">⭐</span>` : "";
+    const starHtml = (m.starredBy && m.starredBy["agent"]) ? `<span style="font-size:12px;margin-right:4px">⭐</span>` : "";
 
     /* #13 — שם הכותב (במיוחד אם הוחלף נציג) */
     const myName = (typeof currentUser!=="undefined"&&currentUser?.name) || ADMIN_USER;
@@ -1001,19 +1018,51 @@ function renderMsgs(msgs) {
       bubEl.addEventListener("click", () => { if (!m.deleted) openCtx(key, m, isAgent); });
     }
 
-    /* swipe לתגובה */
-    let touchStartX = 0;
-    row.addEventListener("touchstart", e => { touchStartX = e.touches[0].clientX; }, { passive: true });
-    row.addEventListener("touchend", e => {
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      if (dx < -60) { setReply(key, m); } /* swipe שמאלה */
-    }, { passive: true });
+    /* swipe לתגובה (#4) — נשלח (me) גורר שמאלה, התקבל (them) גורר ימינה */
+    (function(){
+      const bub = row.querySelector(".msg-bubble") || row;
+      const mine = isAgent; /* הודעה שלי = נציג */
+      let sx=0, sy=0, dragging=false, decided=false, active=false, curDx=0;
+      const TH=55; /* סף הפעלה */
+      row.addEventListener("touchstart", e=>{ sx=e.touches[0].clientX; sy=e.touches[0].clientY; dragging=true; decided=false; active=false; curDx=0; }, {passive:true});
+      row.addEventListener("touchmove", e=>{
+        if(!dragging) return;
+        const dx=e.touches[0].clientX-sx, dy=e.touches[0].clientY-sy;
+        if(!decided){
+          if(Math.abs(dx)<6 && Math.abs(dy)<6) return;
+          /* אם התנועה אנכית בעיקר — גלילה, לא swipe */
+          if(Math.abs(dy)>Math.abs(dx)){ dragging=false; return; }
+          /* כיוון תקין בלבד */
+          if(mine && dx>0){ dragging=false; return; }      /* שלי: רק שמאלה */
+          if(!mine && dx<0){ dragging=false; return; }      /* שלהם: רק ימינה */
+          decided=true; active=true;
+        }
+        if(!active) return;
+        curDx=Math.max(-90,Math.min(90,dx));
+        bub.style.transition="none";
+        bub.style.transform=`translateX(${curDx*0.6}px)`;
+        bub.style.opacity = String(1-Math.min(Math.abs(curDx)/220,0.25));
+        row.classList.toggle("swiping-reply", Math.abs(curDx)>=TH);
+      }, {passive:true});
+      const endSwipe=()=>{
+        if(!dragging && !active){ return; }
+        dragging=false;
+        if(active){
+          bub.style.transition="transform .2s ease, opacity .2s ease";
+          bub.style.transform=""; bub.style.opacity="";
+          row.classList.remove("swiping-reply");
+          if(Math.abs(curDx)>=TH) setReply(key, m);
+        }
+        active=false;
+      };
+      row.addEventListener("touchend", endSwipe, {passive:true});
+      row.addEventListener("touchcancel", endSwipe, {passive:true});
+    })();
 
     container.insertBefore(row, typingRow);
-
-    /* סימון כנקרא */
-    if (!isAgent && !m.agentRead) set(ref(db, `clients/${curPhone}/messages/${key}/agentRead`), true);
   });
+  /* הערה: סימון כנקרא הועבר ל-openChat בלבד (#7) — לא מסמנים פר-רינדור,
+     כדי שמונה ההודעות שלא נקראו לא יתאפס בקבלת הודעה/רענון/סנכרון */
 
   if (window.initImageLoaders) window.initImageLoaders(container);
   /* גלילה מיידית לתחתית */
@@ -1093,8 +1142,10 @@ async function toggleReaction(msgKey, emoji) {
 window.toggleReaction = toggleReaction;
 
 async function starMsg(key, msg) {
-  const cur = msg.starred || false;
-  await set(ref(db, `clients/${curPhone}/messages/${key}/starred`), !cur);
+  /* כוכב פרטי (#5) — נשמר תחת starredBy/<צד>, כך שכל צד רואה רק את שלו */
+  const me = "agent";
+  const cur = !!(msg.starredBy && msg.starredBy[me]);
+  await set(ref(db, `clients/${curPhone}/messages/${key}/starredBy/${me}`), cur ? null : true);
   toast(cur ? "הוסר מהמועדפים" : "⭐ נוסף למועדפים");
 }
 
@@ -1367,6 +1418,13 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       const file=cPendingFile, caption=document.getElementById("cimg-caption").value.trim(), oneTime=cPendingOneTime;
       const sb=document.getElementById("cimg-send"); sb.disabled=true;
       cCancelPreview();
+      /* בועת העלאה זמנית — משוב מיידי (#3) */
+      const container=document.getElementById("msgs-container");
+      const typingRow=document.getElementById("typing-row");
+      const pend=document.createElement("div");
+      pend.className="msg-row me";
+      pend.innerHTML=`<div class="msg-bubble"><div class="img-skeleton" style="animation:none"><div class="img-sk-inner"><svg class="img-gspin" width="34" height="34" viewBox="0 0 50 50"><circle class="img-gspin-track" cx="25" cy="25" r="20" fill="none" stroke-width="5"/><circle class="img-gspin-arc" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="round"/></svg><div class="img-sk-txt" style="display:block">מעלה תמונה…</div></div></div></div>`;
+      if(container){container.insertBefore(pend,typingRow);container.scrollTop=container.scrollHeight;}
       try{
         const ext=file.name.split('.').pop()||'jpg';
         const snapshot=await uploadBytes(sRef(storage,"chat-images/"+curPhone+"/"+Date.now()+"."+ext),file);
@@ -1376,8 +1434,9 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
         if(oneTime){msg.oneTime=true;msg.viewed=false;}
         if(replyTo){msg.replyTo={text:"📷 תמונה",sender:replyTo.sender};cancelReply();}
         await set(ref(db,"clients/"+curPhone+"/messages/"+key),msg);
+        pend.remove(); /* יוחלף בהודעה האמיתית מה-listener */
         toast("✓ תמונה נשלחה");
-      }catch(err){toast("שגיאה בהעלאה");console.error(err);}
+      }catch(err){pend.remove();toast("שגיאה בהעלאה");console.error(err);}
       finally{sb.disabled=false;}
     };
 
