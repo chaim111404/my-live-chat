@@ -119,6 +119,11 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 .reply-preview{background:rgba(59,130,246,.12);border-right:3px solid var(--p);border-radius:8px;padding:6px 10px;margin-bottom:4px;font-size:12px;color:var(--txt2);max-width:100%;overflow:hidden}
 .reply-preview-name{font-weight:700;color:var(--p);margin-bottom:2px;font-size:11px}
 .reply-preview-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* הדגשה רגעית של הודעת יעד אחרי ניווט מ-reply (#1) */
+@keyframes msgJumpHL{0%{box-shadow:0 0 0 0 rgba(59,130,246,.55)}30%{box-shadow:0 0 0 3px rgba(59,130,246,.55)}100%{box-shadow:0 0 0 0 rgba(59,130,246,0)}}
+.msg-jump-hl{animation:msgJumpHL 1.5s ease}
+/* פס "הודעות חדשות" כשהצ'אט פתוח (#2) */
+.new-msgs-bar{align-self:stretch;text-align:center;font-size:12px;font-weight:700;color:var(--p);background:rgba(59,130,246,.12);border-radius:20px;padding:5px 12px;margin:6px 0}
 .msg-bubble{padding:9px 13px;border-radius:18px;font-size:15px;line-height:1.5;word-break:break-word;position:relative;cursor:pointer;user-select:none;transition:opacity .15s}
 .msg-bubble:active{opacity:.8}
 .msg-row.me .msg-bubble{background:var(--bubble-me);color:#fff;border-bottom-right-radius:5px}
@@ -655,6 +660,11 @@ let curListener = null;
 let typingListener = null;
 let presenceListener = null;
 let replyTo = null;
+/* מצב פס "הודעות חדשות" (#2) */
+let chatAtBottom = true;      /* האם המשתמש בתחתית הצ'אט */
+let newMsgsSinceRead = 0;     /* מונה הודעות חדשות שנכנסו בזמן שלא בתחתית */
+let firstUnreadKey = null;    /* מפתח ההודעה הראשונה שלא נקראה (למיקום הפס) */
+let lastRenderedKeys = new Set(); /* מפתחות שכבר רונדרו, לזיהוי חדשות */
 let ctxMsgKey = null;
 let ctxMsgData = null;
 let typingTimer = null;
@@ -874,6 +884,18 @@ function openChat(phone) {
 
   curListener = onValue(ref(db, `clients/${phone}/messages`), snap => renderMsgs(snap.val() || {}));
 
+  /* #2 — איפוס מצב פס "הודעות חדשות" + מעקב גלילה */
+  chatAtBottom = true; newMsgsSinceRead = 0; firstUnreadKey = null; lastRenderedKeys = new Set();
+  const _mc = document.getElementById("msgs-container");
+  if (_mc && !_mc.dataset.nmBound) {
+    _mc.dataset.nmBound = "1";
+    _mc.addEventListener("scroll", () => {
+      const atBottom = (_mc.scrollHeight - _mc.scrollTop - _mc.clientHeight) < 60;
+      chatAtBottom = atBottom;
+      if (atBottom && newMsgsSinceRead > 0) { newMsgsSinceRead = 0; firstUnreadKey = null; renderMsgs(allClients[curPhone]?.messages || {}); }
+    }, { passive: true });
+  }
+
   /* סימון כנקרא — רק עכשיו, כשהמשתמש פתח את הצ'אט בפועל (#7) */
   (async () => {
     try {
@@ -942,6 +964,17 @@ function renderMsgs(msgs) {
   const entries = Object.entries(msgs).filter(([, m]) => m.type !== "closed" && !m.hiddenForAgent);
   entries.sort(([, a], [, b]) => a.at - b.at);
 
+  /* #2 — זיהוי הודעות חדשות שנכנסו בזמן שהמשתמש לא בתחתית */
+  container.querySelector(".new-msgs-bar")?.remove();
+  const incomingNew = entries.filter(([key, m]) => (m.sender === "client" || !m.sender) && !lastRenderedKeys.has(key));
+  const isFirstRender = lastRenderedKeys.size === 0;
+  if (!isFirstRender && !chatAtBottom && incomingNew.length) {
+    if (!firstUnreadKey) firstUnreadKey = incomingNew[0][0];
+    newMsgsSinceRead += incomingNew.length;
+  }
+  /* עדכון מאגר המפתחות שרונדרו */
+  entries.forEach(([key]) => lastRenderedKeys.add(key));
+
   /* #2 — באנר 'נפתחה על ידי' */
   container.querySelector(".opened-by-ban")?.remove();
   const ob = allClients?.[curPhone]?.openedBy;
@@ -956,6 +989,13 @@ function renderMsgs(msgs) {
 
   let lastDate = "";
   entries.forEach(([key, m]) => {
+    /* #2 — פס "הודעות חדשות" לפני ההודעה הראשונה שלא נקראה */
+    if (firstUnreadKey && key === firstUnreadKey && newMsgsSinceRead > 0) {
+      const bar = document.createElement("div");
+      bar.className = "new-msgs-bar";
+      bar.textContent = newMsgsSinceRead === 1 ? "הודעה חדשה" : `${newMsgsSinceRead} הודעות חדשות`;
+      container.insertBefore(bar, typingRow);
+    }
     const dateStr = new Date(m.at).toLocaleDateString("he-IL");
     if (dateStr !== lastDate) {
       lastDate = dateStr;
@@ -972,7 +1012,7 @@ function renderMsgs(msgs) {
     /* reply preview */
     let replyHtml = "";
     if (m.replyTo) {
-      replyHtml = `<div class="reply-preview" style="display:flex;align-items:center;gap:8px">${m.replyTo.type === "image" && m.replyTo.imageUrl ? `<img src="${m.replyTo.imageUrl}" style="width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0" alt=""/>` : ""}<div style="min-width:0;flex:1"><div class="reply-preview-name">${m.replyTo.sender === "agent" ? "אתה" : "לקוח"}</div><div class="reply-preview-text">${m.replyTo.type === "image" ? (m.replyTo.text || "תמונה") : m.replyTo.text}</div></div></div>`;
+      replyHtml = `<div class="reply-preview" style="display:flex;align-items:center;gap:8px;cursor:pointer"${m.replyTo.key ? ` onclick="window.jumpToMsg('${m.replyTo.key}')"` : ""}>${m.replyTo.type === "image" && m.replyTo.imageUrl ? `<img src="${m.replyTo.imageUrl}" style="width:34px;height:34px;border-radius:6px;object-fit:cover;flex-shrink:0" alt=""/>` : ""}<div style="min-width:0;flex:1"><div class="reply-preview-name">${m.replyTo.sender === "agent" ? "אתה" : "לקוח"}</div><div class="reply-preview-text">${m.replyTo.type === "image" ? (m.replyTo.text || "תמונה") : m.replyTo.text}</div></div></div>`;
     }
 
     /* bubble */
@@ -1109,9 +1149,11 @@ function renderMsgs(msgs) {
      כדי שמונה ההודעות שלא נקראו לא יתאפס בקבלת הודעה/רענון/סנכרון */
 
   if (window.initImageLoaders) window.initImageLoaders(container);
-  /* גלילה מיידית לתחתית */
-  container.scrollTop = container.scrollHeight;
-  setTimeout(() => { container.scrollTop = container.scrollHeight; }, 60);
+  /* #2 — גלילה לתחתית רק אם המשתמש כבר בתחתית (אחרת לא קופצים, מציגים פס) */
+  if (chatAtBottom) {
+    container.scrollTop = container.scrollHeight;
+    setTimeout(() => { container.scrollTop = container.scrollHeight; }, 60);
+  }
 }
 
 /* ── שליחת הודעה ── */
@@ -1171,9 +1213,22 @@ function setReply(key, msg) {
   document.getElementById("chat-ta").focus();
 }
 function cancelReply() { replyTo = null; document.getElementById("reply-bar").classList.remove("show"); const t=document.getElementById("reply-bar-thumb"); if(t){t.style.display="none";t.src="";} }
+/* ניווט להודעה המקורית מתוך תצוגת ה-reply (#1) */
+window.jumpToMsg = (key) => {
+  const container = document.getElementById("msgs-container");
+  if (!container) return;
+  const target = container.querySelector(`.msg-row[data-key="${key}"]`) || container.querySelector(`[data-key="${key}"]`)?.closest(".msg-row");
+  if (!target) { toast("ההודעה המקורית לא נמצאה"); return; }
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  const bubble = target.querySelector(".msg-bubble") || target;
+  bubble.classList.remove("msg-jump-hl");
+  void bubble.offsetWidth; /* reflow כדי לאפס את האנימציה */
+  bubble.classList.add("msg-jump-hl");
+  setTimeout(() => bubble.classList.remove("msg-jump-hl"), 1600);
+};
 /* בונה אובייקט reply עם תמונה ממוזערת אם רלוונטי (#reply לתמונה) */
 function buildReplyMeta(r) {
-  const meta = { sender: r.sender };
+  const meta = { sender: r.sender, key: r.key };
   if (r.type === "image" && r.imageUrl) { meta.type = "image"; meta.imageUrl = r.imageUrl; meta.text = r.text ? r.text.slice(0, 80) : ""; }
   else { meta.text = (r.text || "").slice(0, 80); }
   return meta;
