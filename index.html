@@ -226,7 +226,25 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
     .rating-star.active{filter:none;opacity:1;transform:scale(1.15)}
     
   
-    .msg-img { max-width:220px; max-height:220px; border-radius:14px; object-fit:cover; cursor:pointer; display:block; margin-top:4px; }
+    .msg-img { max-width:220px; max-height:220px; border-radius:14px; object-fit:cover; cursor:pointer; display:block; margin-top:4px; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; -webkit-user-drag:none; }
+    /* ── טעינת תמונות: skeleton + ספינר Google + fade (זהה ב-3 הקבצים) ── */
+    .img-skeleton{width:220px;max-width:100%;height:220px;border-radius:14px;background:linear-gradient(110deg,rgba(255,255,255,.04) 30%,rgba(255,255,255,.09) 50%,rgba(255,255,255,.04) 70%);background-size:220% 100%;animation:imgSkShimmer 1.5s ease-in-out infinite;display:flex;align-items:center;justify-content:center;overflow:hidden;margin-top:4px}
+    @keyframes imgSkShimmer{from{background-position:220% 0}to{background-position:-220% 0}}
+    .img-sk-inner{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;text-align:center;width:100%}
+    .img-sk-txt{font-size:12px;color:rgba(255,255,255,.72);line-height:1.4;max-width:190px}
+    .img-gspin{animation:imgGspinRotate 1.4s linear infinite}
+    .img-gspin-track{stroke:rgba(255,255,255,.12)}
+    .img-gspin-arc{stroke:var(--p,#3b82f6);stroke-dasharray:90 150;stroke-dashoffset:0;animation:imgGspinDash 1.4s ease-in-out infinite}
+    @keyframes imgGspinRotate{to{transform:rotate(360deg);transform-origin:center}}
+    @keyframes imgGspinDash{0%{stroke-dasharray:1 150;stroke-dashoffset:0}50%{stroke-dasharray:90 150;stroke-dashoffset:-35}100%{stroke-dasharray:90 150;stroke-dashoffset:-124}}
+    .img-sk-retry{display:inline-flex;align-items:center;gap:6px;background:var(--p,#3b82f6);color:#fff;border:none;border-radius:18px;padding:7px 14px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer}
+    .img-sk-retry:active{opacity:.85}
+    .img-fade-in{opacity:0;transition:opacity .35s ease}
+    .img-fade-in.img-fade-show{opacity:1}
+    .img-cap{font-size:13px;margin-top:4px}
+    .lb-loading{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#fff;z-index:9002}
+    .lb-loading.show{display:flex}
+    .lb-loading .img-sk-txt{color:rgba(255,255,255,.85)}
     .img-lightbox img { transform-origin:center; will-change:transform; }
     .ot-receive{display:inline-flex;align-items:center;gap:6px;cursor:pointer;font-size:13.5px;font-weight:600;color:var(--p)}
     .ot-sent,.ot-opened{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-style:italic;opacity:.7}
@@ -429,8 +447,9 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 </div>
 
 <div id="toast-wrap"></div>
-  <div class="img-lightbox" id="img-lightbox" onclick="this.classList.remove('show')">
+  <div class="img-lightbox" id="img-lightbox" onclick="if(event.target===this){this.classList.remove('show'); if(window.cFinalizeOneTimeClose) window.cFinalizeOneTimeClose();}">
     <button class="img-lightbox-close" onclick="document.getElementById('img-lightbox').classList.remove('show'); if(window.cFinalizeOneTimeClose) window.cFinalizeOneTimeClose();"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+    <div class="lb-loading" id="lb-loading"><svg class="img-gspin" width="40" height="40" viewBox="0 0 50 50"><circle class="img-gspin-track" cx="25" cy="25" r="20" fill="none" stroke-width="5"/><circle class="img-gspin-arc" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="round"/></svg><div class="img-sk-txt">מוריד תמונה מהשרת…</div></div>
     <img id="lightbox-img" src="" alt="תמונה"/>
   </div>
   <input type="file" id="chat-file-input" accept="image/*" style="display:none"/>
@@ -451,6 +470,133 @@ const _a = initializeApp({
   appId:"1:893227581235:web:3254c85705dfe5fe894846"
 });
 const db = getDatabase(_a);
+
+/* ════════════════════════════════════════════════════════════════
+   מודול טעינת תמונות חכם (skeleton + retry + offline)
+   זהה ב-3 הקבצים: index / admin / chat
+   דרישות 1-6 + 9-11 מקובץ התיקונים
+   ════════════════════════════════════════════════════════════════ */
+(function(){
+  /* כבר אותחל? למנוע כפילות */
+  if (window.__imgLoaderInit) return;
+  window.__imgLoaderInit = true;
+
+  /* קונפיג — ערכים מקצועיים, מאוזנים מול עומס שרת */
+  const SLOW_MS   = 8000;            /* אחרי 8ש' — "חיבור איטי" */
+  const TIMEOUT_MS= 12000;           /* 12ש' לכל ניסיון = תקיעה → כשל */
+  const BACKOFFS  = [2000,5000,10000]; /* המתנות בין ניסיונות (3 ניסיונות) */
+  const MAX_TRIES = BACKOFFS.length;
+
+  /* רישום ה-skeletons הפעילים, כדי לחדש בחזרת רשת */
+  const active = new Map(); /* el -> state */
+
+  function spinnerSVG(){
+    /* קשת מסתובבת בסגנון Google (SVG, לא אמוji) */
+    return `<svg class="img-gspin" width="34" height="34" viewBox="0 0 50 50"><circle class="img-gspin-track" cx="25" cy="25" r="20" fill="none" stroke-width="5"/><circle class="img-gspin-arc" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="round"/></svg>`;
+  }
+
+  function setState(el, state, opts={}){
+    el.dataset.state = state;
+    const url = el.dataset.url;
+    if (state === "loading"){
+      el.innerHTML = `<div class="img-sk-inner">${spinnerSVG()}<div class="img-sk-txt" style="display:none"></div></div>`;
+    } else if (state === "slow"){
+      const t = el.querySelector(".img-sk-txt");
+      if (t){ t.textContent = "החיבור לאינטרנט איטי מהרגיל. מנסים לטעון את התמונה…"; t.style.display="block"; }
+    } else if (state === "offline"){
+      el.innerHTML = `<div class="img-sk-inner"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" opacity=".7"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55"/><path d="M5 12.55a10.94 10.94 0 0 1 5.17-2.39"/><path d="M10.71 5.05A16 16 0 0 1 22.58 9"/><path d="M1.42 9a15.91 15.91 0 0 1 4.7-2.88"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg><div class="img-sk-txt" style="display:block">אין חיבור לאינטרנט. הטעינה תימשך כשהחיבור יחזור.</div></div>`;
+    } else if (state === "failed"){
+      el.innerHTML = `<div class="img-sk-inner"><div class="img-sk-txt" style="display:block;margin-bottom:8px">לא הצלחנו להוריד את התמונה עקב חיבור אינטרנט חלש. מומלץ לעבור לאזור עם קליטה חזקה יותר ולנסות שוב.</div><button class="img-sk-retry" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>נסה שוב</button></div>`;
+      const btn = el.querySelector(".img-sk-retry");
+      if (btn) btn.addEventListener("click", e=>{ e.stopPropagation(); start(el, true); });
+    }
+  }
+
+  function clearTimers(st){
+    if (st.slowT) clearTimeout(st.slowT);
+    if (st.toT)   clearTimeout(st.toT);
+    if (st.backoffT) clearTimeout(st.backoffT);
+    st.slowT = st.toT = st.backoffT = null;
+  }
+
+  function succeed(el, url){
+    const st = active.get(el); if (st) clearTimers(st);
+    active.delete(el);
+    /* החלפה חלקה ל-img האמיתי עם fade */
+    const img = document.createElement("img");
+    img.className = "msg-img img-fade-in";
+    img.src = url;
+    img.alt = "תמונה";
+    img.dataset.url = url;
+    el.replaceWith(img);
+    requestAnimationFrame(()=> img.classList.add("img-fade-show"));
+  }
+
+  function start(el, isManual){
+    if (!el.dataset.url) return;
+    const url = el.dataset.url;
+
+    /* אופליין — לא לטעון, להמתין לחזרת רשת */
+    if (!navigator.onLine){
+      setState(el, "offline");
+      active.set(el, { tries:0, waiting:"online" });
+      return;
+    }
+
+    let st = active.get(el) || { tries:0 };
+    if (isManual) st.tries = 0;
+    active.set(el, st);
+    setState(el, "loading");
+
+    const probe = new Image();
+    st.probe = probe;
+
+    st.slowT = setTimeout(()=>{ if (el.dataset.state==="loading") setState(el,"slow"); }, SLOW_MS);
+
+    const onDone = ok => {
+      clearTimers(st);
+      probe.onload = probe.onerror = null;
+      if (ok){ succeed(el, url); return; }
+      /* כשל — retry עם backoff, עד MAX_TRIES */
+      st.tries++;
+      if (st.tries >= MAX_TRIES){
+        setState(el, "failed"); /* מצב ידני: כפתור "נסה שוב" */
+        return;
+      }
+      const wait = BACKOFFS[st.tries-1] || 10000;
+      st.backoffT = setTimeout(()=>{ if (navigator.onLine) start(el,false); else { setState(el,"offline"); st.waiting="online"; } }, wait);
+    };
+
+    st.toT = setTimeout(()=>{ probe.src=""; onDone(false); }, TIMEOUT_MS); /* תקיעה = כשל */
+    probe.onload  = ()=> onDone(true);
+    probe.onerror = ()=> onDone(false);
+    probe.src = url;
+  }
+
+  /* חזרת רשת — לחדש כל מי שממתין */
+  window.addEventListener("online", ()=>{
+    active.forEach((st, el)=>{ if (st.waiting==="online"){ st.waiting=null; start(el,false); } });
+  });
+  window.addEventListener("offline", ()=>{
+    active.forEach((st, el)=>{ clearTimers(st); if (el.dataset && el.dataset.state!=="failed"){ setState(el,"offline"); st.waiting="online"; } });
+  });
+
+  /* API ציבורי — לקרוא אחרי כל רינדור הודעות */
+  window.initImageLoaders = function(root){
+    const scope = root || document;
+    scope.querySelectorAll(".img-skeleton:not([data-init])").forEach(el=>{
+      el.dataset.init = "1";
+      start(el, false);
+    });
+  };
+
+  /* בונה HTML של skeleton — לשימוש ברינדור (במקום <img> ישיר) */
+  window.imgSkeletonHTML = function(url, caption){
+    const cap = caption ? `<div class="img-cap">${caption}</div>` : "";
+    return `<div class="img-skeleton" data-url="${url}"></div>${cap}`;
+  };
+})();
+
 const storage = getStorage(_a);
 
 /* ── קבועים ── */
@@ -777,7 +923,7 @@ function renderMsgs(msgs) {
             if (m.oneTime && !mineImg && m.viewed) return `<span class="ot-opened">נפתחה</span>`;
             if (m.oneTime && !mineImg && !m.viewed) return `<span class="ot-receive"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="11" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg> תמונה חד-פעמית · הקש לצפייה</span>`;
             if (m.oneTime && mineImg) return `<span class="ot-sent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="10" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg> ${m.viewed ? "נצפתה" : "תמונה חד-פעמית"}</span>`;
-            return `<img class="msg-img" src="${m.imageUrl}" data-url="${m.imageUrl}" alt="תמונה" loading="lazy"/>${m.text ? `<div style="font-size:13px;margin-top:4px">${m.text}</div>` : ""}`;
+            return window.imgSkeletonHTML(m.imageUrl, m.text || "");
           })()
         : `${m.text}${m.edited ? `<span class="msg-edited">(נערך)</span>` : ""}`;
 
@@ -838,8 +984,11 @@ function renderMsgs(msgs) {
 
     /* לחיצה על bubble */
     const bubEl = row.querySelector(".msg-bubble");
-    const isImgM = m.type === "image" && m.imageUrl && !m.deleted;
-    if (isImgM) {
+    const isViewedOneTime = m.type === "image" && m.oneTime && m.viewed;
+    const isImgM = m.type === "image" && m.imageUrl && !m.deleted && !isViewedOneTime;
+    if (isViewedOneTime) {
+      /* תמונה חד-פעמית שנצפתה — read-only, ללא פעולות הודעה (#9) */
+    } else if (isImgM) {
       let lpt = null, lpf = false;
       const sLP = () => { lpf = false; lpt = setTimeout(() => { lpf = true; openCtx(key, m, isAgent); }, 500); };
       const cLP = () => { if (lpt) clearTimeout(lpt); };
@@ -866,6 +1015,7 @@ function renderMsgs(msgs) {
     if (!isAgent && !m.agentRead) set(ref(db, `clients/${curPhone}/messages/${key}/agentRead`), true);
   });
 
+  if (window.initImageLoaders) window.initImageLoaders(container);
   /* גלילה מיידית לתחתית */
   container.scrollTop = container.scrollHeight;
   setTimeout(() => { container.scrollTop = container.scrollHeight; }, 60);
@@ -1157,9 +1307,15 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
     function clbApply(){const i=document.getElementById("lightbox-img");if(i)i.style.transform=`translate(${clbX}px,${clbY}px) scale(${clbScale})`;}
     function clbReset(){clbScale=1;clbX=0;clbY=0;clbApply();}
     window.openLightbox = (url) => {
-      document.getElementById("lightbox-img").src = url;
+      const img=document.getElementById("lightbox-img");
+      const ld=document.getElementById("lb-loading");
       clbReset();
       document.getElementById("img-lightbox").classList.add("show");
+      img.style.visibility="hidden";
+      if(ld)ld.classList.add("show");
+      img.onload=()=>{img.style.visibility="visible";if(ld)ld.classList.remove("show");};
+      img.onerror=()=>{if(ld)ld.querySelector(".img-sk-txt").textContent="שגיאה בטעינת התמונה";};
+      img.src=url;
     };
     (function initClbZoom(){
       const lb=document.getElementById("img-lightbox"),img=document.getElementById("lightbox-img");
