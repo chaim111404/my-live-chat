@@ -1063,7 +1063,7 @@ function renderMsgs(msgs) {
       : "";
 
     /* starred */
-    const starHtml = (m.starredBy && m.starredBy["agent"]) ? `<span style="margin-right:4px;display:inline-flex;vertical-align:middle"><svg width="12" height="12" viewBox="0 0 24 24" fill="var(--warn,#f59e0b)" stroke="var(--warn,#f59e0b)" stroke-width="1"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></span>` : "";
+    const starHtml = (m.starredBy && m.starredBy["agent"]) ? `<span style="font-size:12px;margin-right:4px">⭐</span>` : "";
 
     /* #13 — שם הכותב (במיוחד אם הוחלף נציג) */
     const myName = (typeof currentUser!=="undefined"&&currentUser?.name) || ADMIN_USER;
@@ -1261,7 +1261,7 @@ async function starMsg(key, msg) {
   const me = "agent";
   const cur = !!(msg.starredBy && msg.starredBy[me]);
   await set(ref(db, `clients/${curPhone}/messages/${key}/starredBy/${me}`), cur ? null : true);
-  toast(cur ? "הוסר מהמועדפים" : "נוסף למועדפים");
+  toast(cur ? "הוסר מהמועדפים" : "⭐ נוסף למועדפים");
 }
 
 async function delMe(key) {
@@ -1360,7 +1360,7 @@ function openStarred() {
       if (m.type === "image" && m.imageUrl) {
         content = `<img class="star-msg-img" src="${m.imageUrl}" onclick="window.openLightbox('${m.imageUrl}')" alt="תמונה"/>${m.text ? `<div class="star-msg-text" style="margin-top:4px">${m.text}</div>` : ""}`;
       } else if (m.type === "image") {
-        content = `<div class="star-msg-text" style="opacity:.6;display:flex;align-items:center;gap:5px"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>תמונה</div>`;
+        content = `<div class="star-msg-text" style="opacity:.6">📷 תמונה</div>`;
       } else {
         content = `<div class="star-msg-text">${m.deleted ? "<em style='opacity:.6'>ההודעה נמחקה</em>" : (m.text || "")}</div>`;
       }
