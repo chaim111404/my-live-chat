@@ -775,8 +775,8 @@ function renderMsgs(msgs) {
         ? (() => {
             const mineImg = isAgent;
             if (m.oneTime && !mineImg && m.viewed) return `<span class="ot-opened">נפתחה</span>`;
-            if (m.oneTime && !mineImg && !m.viewed) return `<span class="ot-receive">🔁 תמונה חד-פעמית · הקש לצפייה</span>`;
-            if (m.oneTime && mineImg) return `<span class="ot-sent">🔁 ${m.viewed ? "נצפתה" : "תמונה חד-פעמית"}</span>`;
+            if (m.oneTime && !mineImg && !m.viewed) return `<span class="ot-receive"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="11" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg> תמונה חד-פעמית · הקש לצפייה</span>`;
+            if (m.oneTime && mineImg) return `<span class="ot-sent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="10" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg> ${m.viewed ? "נצפתה" : "תמונה חד-פעמית"}</span>`;
             return `<img class="msg-img" src="${m.imageUrl}" data-url="${m.imageUrl}" alt="תמונה" loading="lazy"/>${m.text ? `<div style="font-size:13px;margin-top:4px">${m.text}</div>` : ""}`;
           })()
         : `${m.text}${m.edited ? `<span class="msg-edited">(נערך)</span>` : ""}`;
