@@ -658,7 +658,7 @@ const EDIT_WINDOW_MS = 30 * 60 * 1000; /* 30 דקות */
 const CHAT_SURFACE = "mobile";
 const LOCK_TTL_MS = 60000, LOCK_HEARTBEAT_MS = 25000, CHAT_IDLE_MS = 15 * 60 * 1000;
 let chatLockRef = null, chatHeartbeat = null, chatIdleTimer = null, lockKnockUnsub = null, knockPopupOpen = false;
-let lockWaitUnsub = null, lockRespUnsub = null;
+let lockWaitUnsub = null, lockRespUnsub = null, lockTakeoverUnsub = null;
 
 /* ── State ── */
 let currentUser = null;
@@ -1134,6 +1134,7 @@ async function openChat(phone, force) {
   startChatHeartbeat();
   resetChatIdle();
   listenLockKnock(phone);
+  listenLockTakeover(phone);
   /* גלילה לתחתית בפתיחה */
   setTimeout(() => {
     const c = document.getElementById("msgs-container");
@@ -1576,7 +1577,7 @@ function openMedia() {
   }
   document.getElementById("media-overlay").classList.add("show");
 }
-function goBack() { const p = curPhone; if (curListener) { curListener(); curListener = null; } if (typingListener) { typingListener(); typingListener = null; } if (presenceListener) { presenceListener(); presenceListener = null; } sendTyping(false); /* #136 — שחרור נעילה + עצירת טיימרים */ stopChatHeartbeat(); if (chatIdleTimer) { clearTimeout(chatIdleTimer); chatIdleTimer = null; } stopLockKnock(); if (p) releaseChatLock(p); curPhone = null; showScreen("s-list"); }
+function goBack() { const p = curPhone; if (curListener) { curListener(); curListener = null; } if (typingListener) { typingListener(); typingListener = null; } if (presenceListener) { presenceListener(); presenceListener = null; } sendTyping(false); /* #136 — שחרור נעילה + עצירת טיימרים */ stopChatHeartbeat(); if (chatIdleTimer) { clearTimeout(chatIdleTimer); chatIdleTimer = null; } stopLockKnock(); stopLockTakeover(); if (p) releaseChatLock(p); curPhone = null; showScreen("s-list"); }
 function showScreen(id) { document.querySelectorAll(".screen").forEach(s => s.classList.remove("active")); document.getElementById(id).classList.add("active"); if(window.__hideBoot)window.__hideBoot(); }
 function closeSheet(id) { document.getElementById(id).classList.remove("show"); }
 function toast(msg) { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.getElementById("toast-wrap").appendChild(el); setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 2500); }
@@ -1677,6 +1678,16 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       });
     }
     function stopLockKnock(){ if (lockKnockUnsub){ lockKnockUnsub(); lockKnockUnsub = null; } knockPopupOpen = false; }
+    /* מאזין לנעילה שלי — אם מנהל דרס אותה (ניתוק כפוי), החלון נסגר אוטומטית */
+    function listenLockTakeover(phone){
+      stopLockTakeover();
+      const myId = currentUser?.userId || "agent";
+      lockTakeoverUnsub = onValue(ref(db, `clients/${phone}/chatLock`), snap => {
+        const cur = snap.val();
+        if (cur && (cur.id !== myId || cur.surface !== CHAT_SURFACE)){ toast(`${cur.name||"מנהל"} נכנס לשיחה במקומך`); goBack(); }
+      });
+    }
+    function stopLockTakeover(){ if (lockTakeoverUnsub){ lockTakeoverUnsub(); lockTakeoverUnsub = null; } }
 
 
     /* חלון "השיחה כבר מנוהלת" (צד המבקש) */
@@ -1684,6 +1695,7 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       const c = allClients[phone] || {};
       const myId = currentUser?.userId || "agent";
       const isSelf = holder && holder.id === myId;
+      const isAdminUser = currentUser?.role === "admin";
       const ov = document.createElement("div");
       ov.id = "chat-lock-pop";
       ov.className = "sheet-overlay show";
@@ -1691,8 +1703,8 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       const inner = isSelf
         ? `<div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px">השיחה עם <strong>${c.name||phone}</strong> כבר פתוחה על ידך ב<strong>${surfaceHeb(holder.surface)}</strong>.<br/>אפשר להמשיך אותה כאן ולסגור את החלון השני.</div>
            <div style="display:flex;flex-direction:column;gap:10px"><button id="clk-force" style="background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">המשך כאן</button><button id="clk-close" style="background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">סגור</button></div>`
-        : `<div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px"><strong>${holder?.name||"נציג אחר"}</strong> כבר מנהל את השיחה עם <strong>${c.name||phone}</strong> כרגע.<br/>אפשר לבקש ממנו להתנתק כדי להיכנס.</div>
-           <div style="display:flex;flex-direction:column;gap:10px"><button id="clk-knock" style="background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">בקש גישה לשיחה</button><button id="clk-close" style="background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">סגור</button></div>`;
+        : `<div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px"><strong>${holder?.name||"נציג אחר"}</strong> כבר מנהל את השיחה עם <strong>${c.name||phone}</strong> כרגע.<br/>אפשר לבקש ממנו להתנתק כדי להיכנס${isAdminUser?", או להיכנס מיד במקומו":""}.</div>
+           <div style="display:flex;flex-direction:column;gap:10px"><button id="clk-knock" style="background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">בקש גישה לשיחה</button>${isAdminUser?`<button id="clk-takeover" style="background:linear-gradient(135deg,#f59e0b,#d97706);border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M18.36 6.64A9 9 0 1120.77 15"/><line x1="12" y1="2" x2="12" y2="12"/></svg>נתק והיכנס במקומו</button>`:""}<button id="clk-close" style="background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">סגור</button></div>`;
       ov.innerHTML = `<div class="action-sheet" style="border-radius:24px;padding:30px 24px;max-width:340px;text-align:center;animation:none">
         <div style="width:54px;height:54px;border-radius:50%;background:rgba(59,130,246,.14);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--p)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
         <div style="font-size:18px;font-weight:800;margin-bottom:8px">השיחה בשימוש</div>${inner}</div>`;
@@ -1703,6 +1715,9 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       if (isSelf){
         document.getElementById("clk-force").onclick = () => { closePop(); openChat(phone, true); };
       } else {
+        /* מנהל בלבד — ניתוק כפוי ללא אישור המחזיק */
+        const takeoverBtn = document.getElementById("clk-takeover");
+        if (takeoverBtn) takeoverBtn.onclick = () => { closePop(); openChat(phone, true); };
         document.getElementById("clk-knock").onclick = async () => {
           const myName = currentUser?.name || "נציג";
           await set(ref(db, `clients/${phone}/lockKnock`), { fromId: myId, fromName: myName, at: Date.now() }).catch(()=>{});
