@@ -504,7 +504,7 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getDatabase, ref, get, set, remove, onValue, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getDatabase, ref, get, set, remove, onValue, update, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const _a = initializeApp({
@@ -647,13 +647,21 @@ const db = getDatabase(_a);
 const storage = getStorage(_a);
 
 /* ── קבועים ── */
-const ADMIN_USER = "נתן מנדל";
-const ADMIN_PASS = "12345678";
+const ADMIN_ID = "mi0XmZ8T3nb5VmZ0tLamS25UHBw1";
+const ADMIN_NAME = "נתן מנדל";
+const ADMIN_PASS = "13791379";
 const SESSION_KEY = "wdc_agent";
+const SESSION_MS = 30 * 24 * 60 * 60 * 1000; /* 30 יום — מסונכרן עם admin.html */
 const QUICK_REPLIES = ["מיד אחזור אליך 🙏","הבנתי, בודק...","תודה רבה!","אשמח לעזור","ניצור קשר בהקדם","עכשיו לא זמין, אחזור"];
 const EDIT_WINDOW_MS = 30 * 60 * 1000; /* 30 דקות */
+/* #136 — נעילת שיחה + סגירה אוטומטית אחרי 15 דק' (מסונכרן עם admin.html) */
+const CHAT_SURFACE = "mobile";
+const LOCK_TTL_MS = 60000, LOCK_HEARTBEAT_MS = 25000, CHAT_IDLE_MS = 15 * 60 * 1000;
+let chatLockRef = null, chatHeartbeat = null, chatIdleTimer = null, lockKnockUnsub = null, knockPopupOpen = false;
+let lockWaitUnsub = null, lockRespUnsub = null;
 
 /* ── State ── */
+let currentUser = null;
 let allClients = {};
 let curPhone = null;
 let curListener = null;
@@ -744,17 +752,83 @@ function toggleTheme() {
 }
 if (localStorage.getItem("wdc_theme") === "light") { isDark = false; document.body.classList.add("light"); }
 
-/* ── כניסה ── */
-function doLogin() {
+/* ── כניסה (#141 — אותה מערכת team שמשמשת את admin.html) ── */
+function genToken() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
+
+async function doLogin() {
   const u = document.getElementById("lu").value.trim();
   const p = document.getElementById("lp").value;
   const e = document.getElementById("lerr");
-  if (u === ADMIN_USER && p === ADMIN_PASS) {
-    const expiry = Date.now() + 90 * 24 * 60 * 60 * 1000;
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ ok: true, expiry }));
-    showLoginSuccess(u, showList);
-  } else { e.textContent = "שם משתמש או סיסמה שגויים"; e.classList.add("show"); }
+  const btn = document.getElementById("login-btn");
+  e.classList.remove("show");
+  if (!u || !p) { e.textContent = "נא למלא שם משתמש וסיסמה"; e.classList.add("show"); return; }
+  btn.disabled = true;
+  try {
+    if (u === ADMIN_NAME && p === ADMIN_PASS) {
+      await finishLogin({ userId: ADMIN_ID, role: "admin", name: ADMIN_NAME, perms: {} });
+      return;
+    }
+    const tSnap = await get(ref(db, "team"));
+    if (tSnap.exists()) {
+      const td = tSnap.val();
+      const entry = Object.entries(td).find(([, m]) => m.username === u && m.password === p);
+      if (entry) {
+        const [tid, member] = entry;
+        const sesSnap = await get(ref(db, `sessions/${tid}/mobile`));
+        if (sesSnap.exists()) {
+          const ses = sesSnap.val();
+          const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
+          if (ses.deviceToken && saved.deviceToken !== ses.deviceToken) {
+            btn.disabled = false;
+            showDeviceConflict(tid, member);
+            return;
+          }
+        }
+        await finishLogin({ userId: tid, role: "agent", name: `${member.firstName} ${member.lastName}`, perms: member.perms || {} });
+        return;
+      }
+    }
+    btn.disabled = false;
+    e.textContent = "שם משתמש או סיסמה שגויים";
+    e.classList.add("show");
+  } catch (err) {
+    btn.disabled = false;
+    e.textContent = "שגיאת תקשורת";
+    e.classList.add("show");
+  }
 }
+
+async function finishLogin(user) {
+  const dt = genToken();
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: user.userId, role: user.role, name: user.name, expiry: Date.now() + SESSION_MS, deviceToken: dt }));
+  await set(ref(db, `sessions/${user.userId}/mobile`), { deviceToken: dt, loginAt: Date.now() }).catch(() => {});
+  document.getElementById("login-btn").disabled = false;
+  showLoginSuccess(user.name, () => enterApp(user));
+}
+
+/* חלון "מחובר במכשיר אחר" — תואם עיצובית ל-admin.html */
+function showDeviceConflict(tid, member) {
+  const ov = document.createElement("div");
+  ov.className = "sheet-overlay show";
+  ov.style.cssText = "position:fixed;inset:0;z-index:9997;background:rgba(0,0,0,.5);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px";
+  ov.innerHTML = `
+    <div class="action-sheet" style="border-radius:24px;padding:28px 24px;max-width:340px;text-align:center;animation:none">
+      <div style="width:52px;height:52px;border-radius:50%;background:rgba(239,68,68,.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--err)">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:8px">המשתמש מחובר במכשיר אחר</div>
+      <div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px">כדי להתחבר מהמכשיר הזה, יש לנתק את המכשיר הקודם.</div>
+      <button id="dc-force-btn" style="width:100%;background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer;margin-bottom:10px">נתק מכשיר קודם והתחבר כאן</button>
+      <button id="dc-cancel-btn" style="width:100%;background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">ביטול</button>
+    </div>`;
+  document.body.appendChild(ov);
+  document.getElementById("dc-cancel-btn").onclick = () => ov.remove();
+  document.getElementById("dc-force-btn").onclick = async () => {
+    ov.remove();
+    await finishLogin({ userId: tid, role: "agent", name: `${member.firstName} ${member.lastName}`, perms: member.perms || {} });
+  };
+}
+
 /* #25 — אנימציית התחברת בהצלחה */
 function showLoginSuccess(name, done) {
   const ov = document.getElementById("login-success");
@@ -762,14 +836,119 @@ function showLoginSuccess(name, done) {
   ov.style.display = "flex";
   setTimeout(() => { ov.style.display = "none"; done && done(); }, 1400);
 }
-function doLogout() { localStorage.removeItem(SESSION_KEY); location.reload(); }
+
+function enterApp(user) {
+  currentUser = user;
+  setupAgentPresence(user);
+  listenMySession(user);
+  checkPermNotify(user);
+  const canChat = user.role === "admin" || !!user.perms?.chat;
+  if (!canChat) { showNoChatPermission(user); return; }
+  showList();
+}
+
+/* #144 — נציג ללא הרשאת צ'אט: חוסם כניסה לצ'אט, לא רק מתחזה להתחברות תקינה */
+function showNoChatPermission(user) {
+  const ov = document.createElement("div");
+  ov.id = "no-chat-perm";
+  ov.className = "sheet-overlay show";
+  ov.style.cssText = "position:fixed;inset:0;z-index:9997;background:linear-gradient(145deg,#0c1a2e,#0a2540);display:flex;align-items:center;justify-content:center;padding:24px";
+  ov.innerHTML = `
+    <div class="action-sheet" style="border-radius:24px;padding:32px 26px;max-width:340px;text-align:center;animation:none">
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,.12);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--warn)">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      </div>
+      <div style="font-size:18px;font-weight:800;margin-bottom:10px">${user.name} יקר, אין לך הרשאה לנהל צ'אט</div>
+      <div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px">ניתן לשלוח בקשת הרשאה למנהל, או לצאת ולהתחבר עם משתמש אחר.</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button id="ncp-req-btn" style="background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">שליחת בקשת הרשאה</button>
+        <button id="ncp-exit-btn" style="background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">יציאה</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  document.getElementById("ncp-exit-btn").onclick = () => doLogout();
+  document.getElementById("ncp-req-btn").onclick = async () => {
+    const btn = document.getElementById("ncp-req-btn");
+    btn.disabled = true; btn.textContent = "הבקשה נשלחה — ממתין לאישור מנהל";
+    await set(ref(db, `permRequests/req_${Date.now()}`), {
+      userId: user.userId, name: user.name, action: "שיחת צ'אט עם לקוח", permKey: "chat", requestedAt: Date.now(), status: "pending"
+    }).catch(() => {});
+    toast("בקשת ההרשאה נשלחה למנהל");
+  };
+  /* אם ההרשאה תאושר בזמן שהחלון פתוח — כניסה אוטומטית בלי צורך בהתחברות מחדש */
+  const stopPermListener = onValue(ref(db, `team/${user.userId}/perms/chat`), snap => {
+    if (snap.val() === true) {
+      stopPermListener();
+      ov.remove();
+      currentUser.perms = { ...(currentUser.perms || {}), chat: true };
+      showList();
+    }
+  });
+}
+
+/* presence אמיתי לנציג/מנהל בצ'אט המובייל — מקביל ל-admin.html, where:"mobile" */
+function setupAgentPresence(user) {
+  if (!user?.userId) return;
+  const pRef = ref(db, `team/${user.userId}/presence`);
+  const write = on => set(pRef, { online: on, lastSeen: Date.now(), where: "mobile" }).catch(() => {});
+  set(ref(db, `team/${user.userId}/lastLogin`), Date.now()).catch(() => {});
+  write(true);
+  onDisconnect(pRef).set({ online: false, lastSeen: Date.now() }).catch(() => {});
+  document.addEventListener("visibilitychange", () => { if (currentUser?.userId) write(document.visibilityState !== "hidden"); });
+  window.addEventListener("pagehide", () => { if (currentUser?.userId) set(pRef, { online: false, lastSeen: Date.now() }).catch(() => {}); });
+}
+
+/* ניתוק מרחוק (למשל כפתור "נתק" של מנהל בדשבורד) */
+function listenMySession(user) {
+  if (!user?.userId) return;
+  onValue(ref(db, `sessions/${user.userId}/mobile`), snap => {
+    if (!snap.exists()) return;
+    const ses = snap.val();
+    const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
+    if (ses.deviceToken === "REVOKED" || (ses.deviceToken && ses.deviceToken !== saved.deviceToken)) {
+      localStorage.removeItem(SESSION_KEY);
+      location.reload();
+    }
+  });
+}
+
+function doLogout() {
+  if (currentUser) {
+    remove(ref(db, `sessions/${currentUser.userId}/mobile`)).catch(() => {});
+    set(ref(db, `team/${currentUser.userId}/presence`), { online: false, lastSeen: Date.now() }).catch(() => {});
+  }
+  localStorage.removeItem(SESSION_KEY);
+  location.reload();
+}
+
 function checkSession() {
   try {
     const s = JSON.parse(localStorage.getItem(SESSION_KEY));
-    return s && s.ok && Date.now() < s.expiry;
-  } catch { return false; }
+    if (!s || !s.userId || Date.now() > s.expiry) {
+      if (s && Date.now() > s.expiry) localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return s;
+  } catch { return null; }
 }
-if (checkSession()) showList();
+
+(function restoreSession() {
+  const s = checkSession();
+  if (!s) return;
+  get(ref(db, `sessions/${s.userId}/mobile`)).then(snap => {
+    if (snap.exists() && snap.val().deviceToken !== s.deviceToken) {
+      localStorage.removeItem(SESSION_KEY);
+      return;
+    }
+    if (s.role === "agent") {
+      get(ref(db, `team/${s.userId}/perms`)).then(ps => {
+        enterApp({ userId: s.userId, role: s.role, name: s.name, perms: ps.val() || {} });
+      }).catch(() => enterApp({ userId: s.userId, role: s.role, name: s.name, perms: {} }));
+    } else {
+      enterApp({ userId: s.userId, role: s.role, name: s.name, perms: {} });
+    }
+  }).catch(() => enterApp({ userId: s.userId, role: s.role, name: s.name, perms: {} }));
+})();
 
 /* ── רשימת שיחות ── */
 function showList() {
@@ -861,7 +1040,10 @@ function archiveSwipe(phone) {
 }
 
 /* ── פתיחת צ'אט ── */
-function openChat(phone) {
+async function openChat(phone, force) {
+  /* #136 — תופסים נעילה לפני חשיפת תוכן. אם תפוס — לא נכנסים, רק חלון חסימה. */
+  const lock = await acquireChatLock(phone, force);
+  if (!lock.ok) { showChatLockedPopup(phone, lock.holder); return; }
   curPhone = phone;
   const c = allClients[phone] || {};
   document.getElementById("chat-name").textContent = c.name || phone;
@@ -948,6 +1130,10 @@ function openChat(phone) {
 
   showScreen("s-chat");
   document.getElementById("chat-ta").focus();
+  /* #136 — נעילה פעילה: heartbeat, טיימר סרק 15 דק', והאזנה לבקשות גישה */
+  startChatHeartbeat();
+  resetChatIdle();
+  listenLockKnock(phone);
   /* גלילה לתחתית בפתיחה */
   setTimeout(() => {
     const c = document.getElementById("msgs-container");
@@ -1066,7 +1252,7 @@ function renderMsgs(msgs) {
     const starHtml = (m.starredBy && m.starredBy["agent"]) ? `<span style="font-size:12px;margin-right:4px">⭐</span>` : "";
 
     /* #13 — שם הכותב (במיוחד אם הוחלף נציג) */
-    const myName = (typeof currentUser!=="undefined"&&currentUser?.name) || ADMIN_USER;
+    const myName = currentUser?.name || "נציג";
     const authorHtml = (isAgent && m.agentName && m.agentName !== myName)
       ? `<span style="font-size:10px;font-weight:700;color:var(--p);margin-left:4px">${m.agentName}</span>` : "";
 
@@ -1163,11 +1349,14 @@ async function sendMsg() {
   const btn = document.getElementById("send-btn"); btn.disabled = true;
   try {
     const key = `msg_${Date.now()}`;
-    const msg = { text, at: Date.now(), sender: "agent", agentRead: true, clientRead: false, agentName: (typeof currentUser!=="undefined"&&currentUser?.name) || ADMIN_USER || "נציג" };
+    const msg = { text, at: Date.now(), sender: "agent", agentRead: true, clientRead: false, agentName: currentUser?.name || "נציג" };
     if (replyTo) { msg.replyTo = buildReplyMeta(replyTo); cancelReply(); }
     await set(ref(db, `clients/${curPhone}/messages/${key}`), msg);
+    /* #136 — שליחת הודעה מאפסת את מניין 15 הדקות ומרעננת את הנעילה */
+    resetChatIdle();
+    set(ref(db, `clients/${curPhone}/chatLock/at`), Date.now()).catch(()=>{});
     /* #2 — סימון מי פתח (אם אין עדיין) */
-    try{const ob=await get(ref(db,`clients/${curPhone}/openedBy`));if(!ob.exists())await set(ref(db,`clients/${curPhone}/openedBy`),{role:"agent",name:(typeof currentUser!=="undefined"&&currentUser?.name)||ADMIN_USER||"נציג",at:Date.now()});}catch(_){}
+    try{const ob=await get(ref(db,`clients/${curPhone}/openedBy`));if(!ob.exists())await set(ref(db,`clients/${curPhone}/openedBy`),{role:"agent",name:currentUser?.name||"נציג",at:Date.now()});}catch(_){}
     document.getElementById("chat-ta").value = "";
     document.getElementById("chat-ta").style.height = "";
     sendTyping(false);
@@ -1387,7 +1576,7 @@ function openMedia() {
   }
   document.getElementById("media-overlay").classList.add("show");
 }
-function goBack() { if (curListener) { curListener(); curListener = null; } if (typingListener) { typingListener(); typingListener = null; } if (presenceListener) { presenceListener(); presenceListener = null; } sendTyping(false); curPhone = null; showScreen("s-list"); }
+function goBack() { const p = curPhone; if (curListener) { curListener(); curListener = null; } if (typingListener) { typingListener(); typingListener = null; } if (presenceListener) { presenceListener(); presenceListener = null; } sendTyping(false); /* #136 — שחרור נעילה + עצירת טיימרים */ stopChatHeartbeat(); if (chatIdleTimer) { clearTimeout(chatIdleTimer); chatIdleTimer = null; } stopLockKnock(); if (p) releaseChatLock(p); curPhone = null; showScreen("s-list"); }
 function showScreen(id) { document.querySelectorAll(".screen").forEach(s => s.classList.remove("active")); document.getElementById(id).classList.add("active"); if(window.__hideBoot)window.__hideBoot(); }
 function closeSheet(id) { document.getElementById(id).classList.remove("show"); }
 function toast(msg) { const el = document.createElement("div"); el.className = "toast"; el.textContent = msg; document.getElementById("toast-wrap").appendChild(el); setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 2500); }
@@ -1447,33 +1636,111 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
     document.getElementById("rating-skip").onclick = () => document.getElementById("rating-overlay").classList.remove("show");
     
 
-    /* ── נציג אחד בשיחה — בדיקה לפני כניסה ── */
-    async function checkAndEnterChat(phone) {
-      const snap = await get(ref(db, "clients/"+phone+"/activeAgent"));
-      if (snap.exists()) {
-        const data = snap.val();
-        const myId = JSON.parse(localStorage.getItem("wdc_admin_session")||"{}").userId || "admin";
-        if (data.id !== myId && Date.now() - (data.at||0) < 2*60*1000) {
-          toast("נציג אחר כבר בשיחה עם לקוח זה");
-          return false;
-        }
+    /* ── #136 — נעילת שיחה: נציג/מנהל אחד בלבד בשיחה בו-זמנית (דשבורד או מובייל) ── */
+    function surfaceHeb(s){ return s==="mobile" ? "צ'אט מובייל" : "דשבורד"; }
+    async function acquireChatLock(phone, force){
+      const myId = currentUser?.userId || "agent", myName = currentUser?.name || "נציג";
+      const r = ref(db, `clients/${phone}/chatLock`);
+      const res = await runTransaction(r, cur => {
+        const now = Date.now(), fresh = cur && (now - (cur.at||0)) < LOCK_TTL_MS;
+        const mineHere = cur && cur.id === myId && cur.surface === CHAT_SURFACE;
+        if (!force && fresh && !mineHere) return; /* תפוס — ביטול */
+        return { id: myId, name: myName, surface: CHAT_SURFACE, at: now };
+      });
+      if (!res.committed) return { ok:false, holder: res.snapshot.val() };
+      chatLockRef = r;
+      onDisconnect(r).remove().catch(()=>{});
+      return { ok:true };
+    }
+    async function releaseChatLock(phone){
+      const p = phone || curPhone; if (!p) return;
+      if (chatLockRef){ onDisconnect(chatLockRef).cancel().catch(()=>{}); chatLockRef = null; }
+      const myId = currentUser?.userId || "agent";
+      try { const cur = (await get(ref(db, `clients/${p}/chatLock`))).val(); if (!cur || cur.id === myId) await remove(ref(db, `clients/${p}/chatLock`)); } catch(_){}
+      remove(ref(db, `clients/${p}/lockKnock`)).catch(()=>{});
+    }
+    function startChatHeartbeat(){
+      stopChatHeartbeat();
+      chatHeartbeat = setInterval(() => { if (!curPhone){ stopChatHeartbeat(); return; } set(ref(db, `clients/${curPhone}/chatLock/at`), Date.now()).catch(()=>{}); }, LOCK_HEARTBEAT_MS);
+    }
+    function stopChatHeartbeat(){ if (chatHeartbeat){ clearInterval(chatHeartbeat); chatHeartbeat = null; } }
+    function resetChatIdle(){
+      if (chatIdleTimer) clearTimeout(chatIdleTimer);
+      chatIdleTimer = setTimeout(() => { toast("השיחה נסגרה אוטומטית עקב חוסר פעילות (15 דקות)"); goBack(); }, CHAT_IDLE_MS);
+    }
+    /* מאזין לבקשות גישה בזמן שאני מחזיק בשיחה (צד המחזיק) */
+    function listenLockKnock(phone){
+      stopLockKnock();
+      lockKnockUnsub = onValue(ref(db, `clients/${phone}/lockKnock`), snap => {
+        const k = snap.val(), myId = currentUser?.userId || "agent";
+        if (k && k.fromId !== myId && (Date.now()-(k.at||0)) < 120000 && !knockPopupOpen) showKnockPopup(phone, k);
+      });
+    }
+    function stopLockKnock(){ if (lockKnockUnsub){ lockKnockUnsub(); lockKnockUnsub = null; } knockPopupOpen = false; }
+
+
+    /* חלון "השיחה כבר מנוהלת" (צד המבקש) */
+    function showChatLockedPopup(phone, holder){
+      const c = allClients[phone] || {};
+      const myId = currentUser?.userId || "agent";
+      const isSelf = holder && holder.id === myId;
+      const ov = document.createElement("div");
+      ov.id = "chat-lock-pop";
+      ov.className = "sheet-overlay show";
+      ov.style.cssText = "position:fixed;inset:0;z-index:9996;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px";
+      const inner = isSelf
+        ? `<div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px">השיחה עם <strong>${c.name||phone}</strong> כבר פתוחה על ידך ב<strong>${surfaceHeb(holder.surface)}</strong>.<br/>אפשר להמשיך אותה כאן ולסגור את החלון השני.</div>
+           <div style="display:flex;flex-direction:column;gap:10px"><button id="clk-force" style="background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">המשך כאן</button><button id="clk-close" style="background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">סגור</button></div>`
+        : `<div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px"><strong>${holder?.name||"נציג אחר"}</strong> כבר מנהל את השיחה עם <strong>${c.name||phone}</strong> כרגע.<br/>אפשר לבקש ממנו להתנתק כדי להיכנס.</div>
+           <div style="display:flex;flex-direction:column;gap:10px"><button id="clk-knock" style="background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">בקש גישה לשיחה</button><button id="clk-close" style="background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">סגור</button></div>`;
+      ov.innerHTML = `<div class="action-sheet" style="border-radius:24px;padding:30px 24px;max-width:340px;text-align:center;animation:none">
+        <div style="width:54px;height:54px;border-radius:50%;background:rgba(59,130,246,.14);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--p)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg></div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:8px">השיחה בשימוש</div>${inner}</div>`;
+      document.body.appendChild(ov);
+      const cleanup = () => { if (lockWaitUnsub){ lockWaitUnsub(); lockWaitUnsub=null; } if (lockRespUnsub){ lockRespUnsub(); lockRespUnsub=null; } };
+      const closePop = () => { cleanup(); ov.remove(); };
+      document.getElementById("clk-close").onclick = closePop;
+      if (isSelf){
+        document.getElementById("clk-force").onclick = () => { closePop(); openChat(phone, true); };
+      } else {
+        document.getElementById("clk-knock").onclick = async () => {
+          const myName = currentUser?.name || "נציג";
+          await set(ref(db, `clients/${phone}/lockKnock`), { fromId: myId, fromName: myName, at: Date.now() }).catch(()=>{});
+          ov.querySelector(".action-sheet").innerHTML = `<div style="width:54px;height:54px;border-radius:50%;background:rgba(59,130,246,.14);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--p)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:imgGspinRotate .9s linear infinite"><path d="M21 12a9 9 0 11-6.219-8.56"/></svg></div><div style="font-size:18px;font-weight:800;margin-bottom:8px">ממתין לתשובה</div><div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px">נשלחה בקשה ל<strong>${holder?.name||"הנציג"}</strong> להתנתק מהשיחה.</div><button id="clk-close2" style="width:100%;background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">ביטול</button>`;
+          document.getElementById("clk-close2").onclick = () => { remove(ref(db, `clients/${phone}/lockKnock`)).catch(()=>{}); closePop(); };
+          lockWaitUnsub = onValue(ref(db, `clients/${phone}/chatLock`), snap => {
+            const cur = snap.val();
+            if (!cur || (Date.now()-(cur.at||0)) >= LOCK_TTL_MS){ cleanup(); ov.remove(); openChat(phone); }
+          });
+          lockRespUnsub = onValue(ref(db, `clients/${phone}/lockResp`), snap => {
+            const r = snap.val();
+            if (r && r.toId === myId && r.result === "stay"){ toast(`${holder?.name||"הנציג"} בחר להמשיך בשיחה`); remove(ref(db, `clients/${phone}/lockResp`)).catch(()=>{}); closePop(); }
+          });
+        };
       }
-      /* רושם נציג פעיל */
-      const myId = JSON.parse(localStorage.getItem("wdc_admin_session")||"{}").userId || "admin";
-      await set(ref(db, "clients/"+phone+"/activeAgent"), {id: myId, name: (typeof currentUser!=="undefined"&&currentUser?.name) || ADMIN_USER || "נציג", at: Date.now()});
-      /* heartbeat */
-      const hb = setInterval(async () => {
-        if (!chatPhone) { clearInterval(hb); return; }
-        await set(ref(db, "clients/"+chatPhone+"/activeAgent/at"), Date.now());
-      }, 30000);
-      return true;
     }
 
-    async function releaseAgent(phone) {
-      if (!phone) return;
-      await remove(ref(db, "clients/"+phone+"/activeAgent")).catch(()=>{});
+    /* חלון בקשת גישה (צד המחזיק) */
+    function showKnockPopup(phone, k){
+      knockPopupOpen = true;
+      const c = allClients[phone] || {};
+      const ov = document.createElement("div");
+      ov.className = "sheet-overlay show";
+      ov.style.cssText = "position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.55);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px";
+      ov.innerHTML = `<div class="action-sheet" style="border-radius:24px;padding:30px 24px;max-width:340px;text-align:center;animation:none">
+        <div style="width:54px;height:54px;border-radius:50%;background:rgba(245,158,11,.14);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--warn)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg></div>
+        <div style="font-size:18px;font-weight:800;margin-bottom:8px">בקשת גישה לשיחה</div>
+        <div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px"><strong>${k.fromName||"נציג"}</strong> מבקש לנהל את השיחה עם <strong>${c.name||phone}</strong>.<br/>אם תתנתק, השיחה תיפתח אצלו.</div>
+        <div style="display:flex;flex-direction:column;gap:10px"><button id="knk-leave" style="background:linear-gradient(135deg,var(--err),#dc2626);border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">התנתק ופנה את השיחה</button><button id="knk-stay" style="background:var(--bg2);border:none;border-radius:14px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">הישאר בשיחה</button></div></div>`;
+      document.body.appendChild(ov);
+      const done = () => { knockPopupOpen = false; ov.remove(); };
+      document.getElementById("knk-leave").onclick = () => { done(); goBack(); };
+      document.getElementById("knk-stay").onclick = () => {
+        set(ref(db, `clients/${phone}/lockResp`), { toId: k.fromId, result: "stay", at: Date.now() }).catch(()=>{});
+        remove(ref(db, `clients/${phone}/lockKnock`)).catch(()=>{});
+        done();
+      };
     }
-    
 
     /* ── פתח שיחה מחדש ── */
     window.startNewChat = async () => {
@@ -1495,10 +1762,9 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
     
 
     /* ── בדיקת התראות הרשאה ── */
-    function checkPermNotify() {
-      const s = JSON.parse(localStorage.getItem("wdc_admin_session")||"{}");
-      if (!s.userId || s.role === "admin") return;
-      onValue(ref(db, "team/"+s.userId+"/permNotify"), snap => {
+    function checkPermNotify(user) {
+      if (!user?.userId || user.role === "admin") return;
+      onValue(ref(db, "team/"+user.userId+"/permNotify"), snap => {
         if (!snap.exists()) return;
         const n = snap.val();
         if (n.approved && n.at && Date.now() - n.at < 10000) {
@@ -1508,11 +1774,13 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
           d.textContent = "✓ הרשאה אושרה: " + n.action;
           document.body.appendChild(d);
           setTimeout(() => d.remove(), 4000);
-          remove(ref(db, "team/"+s.userId+"/permNotify")).catch(()=>{});
+          remove(ref(db, "team/"+user.userId+"/permNotify")).catch(()=>{});
+          if (currentUser?.userId === user.userId) {
+            get(ref(db, "team/"+user.userId+"/perms")).then(ps => { currentUser.perms = ps.val() || {}; }).catch(()=>{});
+          }
         }
       });
     }
-    checkPermNotify();
     
 
     /* ══ תמונות בצ'אט מובייל — זום, preview, חד-פעמי ══ */
@@ -1592,10 +1860,13 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
         const snapshot=await uploadBytes(sRef(storage,"chat-images/"+curPhone+"/"+Date.now()+"."+ext),file);
         const url=await getDownloadURL(snapshot.ref);
         const key="msg_"+Date.now();
-        const msg={text:caption||"",imageUrl:url,at:Date.now(),sender:"agent",agentRead:true,clientRead:false,agentName:(typeof currentUser!=="undefined"&&currentUser?.name)||ADMIN_USER||"נציג",type:"image"};
+        const msg={text:caption||"",imageUrl:url,at:Date.now(),sender:"agent",agentRead:true,clientRead:false,agentName:currentUser?.name||"נציג",type:"image"};
         if(oneTime){msg.oneTime=true;msg.viewed=false;}
         if(replyTo){msg.replyTo=buildReplyMeta(replyTo);cancelReply();}
         await set(ref(db,"clients/"+curPhone+"/messages/"+key),msg);
+        /* #136 — שליחת תמונה מאפסת את מניין 15 הדקות ומרעננת נעילה */
+        resetChatIdle();
+        set(ref(db,`clients/${curPhone}/chatLock/at`),Date.now()).catch(()=>{});
         pend.remove(); /* יוחלף בהודעה האמיתית מה-listener */
         toast("✓ תמונה נשלחה");
       }catch(err){pend.remove();toast("שגיאה בהעלאה");console.error(err);}
