@@ -95,7 +95,25 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 .empty-sub{font-size:14px;line-height:1.6}
 /* ════ CHAT ════ */
 #s-chat{background:var(--bg0)}
-.chat-topbar{background:var(--bg1);border-bottom:1px solid var(--bdr);padding:calc(var(--safe-top) + 10px) 12px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer}
+.chat-topbar{background:var(--bg1);border-bottom:1px solid var(--bdr);padding:calc(var(--safe-top) + 10px) 12px 10px;display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer;position:relative}
+/* #104 — תפריט אפשרויות + בורר רקע */
+.chat-opts-menu{display:none;position:absolute;top:calc(100% + 2px);inset-inline-end:10px;background:var(--bg1);border:1px solid var(--bdr);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.35);z-index:60;overflow:hidden;min-width:170px}
+.chat-opts-menu.show{display:block}
+.chat-opts-menu button{display:flex;align-items:center;gap:9px;width:100%;background:none;border:none;padding:13px 16px;font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;color:var(--txt);cursor:pointer;text-align:start}
+.chat-opts-menu button:hover{background:var(--bg2)}
+.bg-picker-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);backdrop-filter:blur(5px);z-index:9660;align-items:center;justify-content:center;padding:22px}
+.bg-picker-overlay.show{display:flex}
+.bg-picker-card{background:var(--bg1);border-radius:20px;padding:22px 20px calc(20px + var(--safe-bot));max-width:380px;width:100%;box-shadow:0 24px 64px rgba(0,0,0,.5);max-height:88vh;overflow-y:auto}
+.bg-picker-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.bg-picker-sub{font-size:13px;color:var(--txt2);margin-bottom:16px}
+.bg-swatch-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.bg-swatch{border:none;background:none;cursor:pointer;padding:0;display:flex;flex-direction:column;align-items:center;gap:6px}
+.bg-swatch-preview{width:100%;aspect-ratio:1;border-radius:14px;border:2px solid var(--bdr);transition:border-color .15s,transform .12s}
+.bg-swatch:active .bg-swatch-preview{transform:scale(.95)}
+.bg-swatch.sel .bg-swatch-preview{border-color:var(--p);box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+.bg-swatch-name{font-size:11.5px;font-weight:600;color:var(--txt2)}
+.bg-swatch.sel .bg-swatch-name{color:var(--p)}
+.bg-picker-close{width:100%;margin-top:16px;background:var(--bg2);border:none;border-radius:12px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:12px;cursor:pointer}
 .chat-avatar-sm{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;flex-shrink:0;position:relative}
 .chat-avatar-sm .avatar-online{width:10px;height:10px}
 .chat-header-info{flex:1;min-width:0}
@@ -242,13 +260,6 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 .msg-row .msg-bubble{will-change:transform}
 .msg-row.swiping-reply .msg-bubble{box-shadow:0 0 0 2px var(--p,#3b82f6)}
 
-    .rating-overlay{display:none;position:fixed;inset:0;background:rgba(12,26,46,.8);backdrop-filter:blur(6px);z-index:900;align-items:flex-end;justify-content:center}
-    .rating-overlay.show{display:flex;animation:fadeIn .2s ease}
-    .rating-sheet{background:var(--bg1);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:12px 28px calc(40px + var(--safe-bot));text-align:center}
-    .rating-stars{display:flex;gap:12px;justify-content:center;margin:20px 0}
-    .rating-star{font-size:36px;cursor:pointer;transition:transform .15s;filter:grayscale(1);opacity:.4}
-    .rating-star.active{filter:none;opacity:1;transform:scale(1.15)}
-    
   
     .msg-img { max-width:220px; max-height:220px; border-radius:14px; object-fit:cover; cursor:pointer; display:block; margin-top:4px; -webkit-touch-callout:none; -webkit-user-select:none; user-select:none; -webkit-user-drag:none; }
     /* ── טעינת תמונות: skeleton + ספינר Google + fade (זהה ב-3 הקבצים) ── */
@@ -277,6 +288,8 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
     .cimg-top{display:flex;align-items:center;justify-content:space-between;padding:calc(var(--safe-top) + 14px) 18px 14px;color:#fff;font-size:16px;font-weight:700}
     .cimg-x,.cimg-ot{background:rgba(255,255,255,.12);border:none;border-radius:50%;width:40px;height:40px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center}
     .cimg-ot.active{background:var(--p);box-shadow:0 0 0 3px rgba(14,165,233,.3)}
+    .cimg-ot-hint{display:none;align-items:center;justify-content:center;gap:7px;margin:0 16px 6px;padding:8px 14px;background:rgba(14,165,233,.15);border:1px solid rgba(14,165,233,.4);border-radius:12px;color:#7dd3fc;font-size:12.5px;font-weight:600;text-align:center}
+    .cimg-ot-hint.show{display:flex}
     .cimg-wrap{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;padding:10px}
     .cimg-wrap img{max-width:100%;max-height:100%;object-fit:contain;border-radius:10px}
     .cimg-bottom{display:flex;align-items:center;gap:10px;padding:14px 16px calc(14px + var(--safe-bot))}
@@ -289,6 +302,23 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
     .img-lightbox img { max-width:95vw; max-height:95vh; object-fit:contain; border-radius:12px; }
     .img-lightbox-close { position:absolute; top:calc(var(--safe-top) + 14px); right:14px; background:rgba(255,255,255,.15); border:none; border-radius:50%; width:40px; height:40px; color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:20px; }
 
+
+/* מיפוי צבעים למודול הקישורים (WDLinks) */
+:root{--wdl-accent:var(--p);--wdl-accent-soft:rgba(59,130,246,.18);--wdl-warn:var(--warn);--wdl-warn-soft:rgba(245,158,11,.18);--wdl-text:var(--txt);--wdl-muted:var(--txt2);--wdl-border:var(--bdr);--wdl-surface:var(--bg2);--wdl-card:var(--bg1);--wdl-chip:rgba(255,255,255,.10)}
+
+/* wdl-on-dark — ניגודיות הקישור בתוך בועה כחולה (טקסט לבן על רקע כהה).
+   בבועה הבהירה נשאר צבע המערכת; כאן עוברים ללבן עם קו תחתי עבה ומשקל מודגש,
+   כדי שיהיה ברור מיד שמדובר בקישור לחיץ — בלי לשבור את עיצוב הצ'אט. */
+.msg-row.me .msg-bubble .wdl-a{color:#fff;font-weight:700;text-decoration-color:rgba(255,255,255,.75);text-decoration-thickness:2px;text-underline-offset:3px}
+.msg-row.me .msg-bubble .wdl-a:hover{opacity:1;color:#fff;text-decoration-color:#fff;background:rgba(255,255,255,.18);border-radius:4px}
+.msg-row.me .msg-bubble .wdl-a:focus-visible{outline:2px solid #fff;outline-offset:2px;border-radius:3px}
+.msg-row.me .msg-bubble .wdl-card{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.3)}
+.msg-row.me .msg-bubble .wdl-card:hover{border-color:rgba(255,255,255,.65)}
+.msg-row.me .msg-bubble .wdl-card-title{color:#fff}
+.msg-row.me .msg-bubble .wdl-card-site,.msg-row.me .msg-bubble .wdl-card-desc{color:rgba(255,255,255,.85)}
+/* קו תחתי מעט עבה יותר גם בבועה הבהירה — זיהוי קישור בלי להסתמך על צבע בלבד (נגישות) */
+.wdl-a{text-decoration-thickness:1.5px}
+.wdl-a:focus-visible{outline:2px solid var(--wdl-accent);outline-offset:2px;border-radius:3px}
 </style>
 </head>
 <body>
@@ -380,6 +410,13 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
           <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
         </svg>
       </button>
+      <button class="icon-btn" id="chat-opts-btn" title="אפשרויות">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="5" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="12" cy="19" r="1.7"/></svg>
+      </button>
+    </div>
+    <!-- #104 — תפריט אפשרויות הצ'אט -->
+    <div class="chat-opts-menu" id="chat-opts-menu" onclick="event.stopPropagation()">
+      <button onclick="openBgPicker()"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/><circle cx="6.5" cy="12.5" r="1"/><circle cx="9.5" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/><circle cx="17.5" cy="12.5" r="1"/></svg>רקע הצ'אט</button>
     </div>
   </div>
   <!-- typing indicator -->
@@ -404,11 +441,12 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
   <div class="quick-replies" id="quick-replies"></div>
   <!-- input -->
   <div class="chat-input-area">
+    <div class="wdl-mount" id="wdl-mount"></div>
     <div class="input-row">
       <button style="width:40px;height:40px;border-radius:50%;background:var(--bg2);border:none;color:var(--txt2);display:flex;align-items:center;justify-content:center;flex-shrink:0;cursor:pointer" id="chat-img-btn">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
       </button>
-      <textarea id="chat-ta" class="chat-ta" placeholder="הודעה..." rows="1"></textarea>
+      <textarea id="chat-ta" class="chat-ta" placeholder="הודעה..." rows="1" enterkeyhint="enter"></textarea>
       <button class="send-btn" id="send-btn">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
           <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
@@ -494,14 +532,396 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 </div>
 
 <div id="toast-wrap"></div>
-  <div class="img-lightbox" id="img-lightbox" onclick="if(event.target===this){this.classList.remove('show'); if(window.cFinalizeOneTimeClose) window.cFinalizeOneTimeClose();}">
-    <button class="img-lightbox-close" onclick="document.getElementById('img-lightbox').classList.remove('show'); if(window.cFinalizeOneTimeClose) window.cFinalizeOneTimeClose();"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+  <div class="img-lightbox" id="img-lightbox">
+    <button class="img-lightbox-close" onclick="window.closeLightbox()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <div class="lb-loading" id="lb-loading"><svg class="img-gspin" width="40" height="40" viewBox="0 0 50 50"><circle class="img-gspin-track" cx="25" cy="25" r="20" fill="none" stroke-width="5"/><circle class="img-gspin-arc" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="round"/></svg><div class="img-sk-txt">מוריד תמונה מהשרת…</div></div>
     <img id="lightbox-img" src="" alt="תמונה"/>
   </div>
   <input type="file" id="chat-file-input" accept="image/*" style="display:none"/>
 
 
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   WDLinks — מנגנון קישורים אחיד לכל ממשקי הצ'אט (index / admin / chat).
+   הקוד כאן זהה בשלושת הקבצים בכוונה: המפרט דורש שההתנהגות תהיה זהה בכל
+   ממשק ובכל כיוון שיחה (לקוח↔נציג, מנהל↔לקוח), ללא תלות בזהות השולח.
+   כל התאמה ספציפית לקובץ נעשית דרך WDLinks.init(...) בלבד.
+   ═══════════════════════════════════════════════════════════════════════════ */
+window.WDLinks = (function () {
+  var ENDPOINT = "https://us-central1-deshbord-atarim-sheli.cloudfunctions.net/linkPreview";
+
+  /* ── זיהוי כתובות ───────────────────────────────────────────────────────── */
+  /* תופס כתובת עם פרוטוקול, כתובת שמתחילה ב-www, או דומיין עם סיומת תקנית */
+  var URL_RE = /((?:https?:\/\/|www\.)[^\s<>"'`֐-׿]+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+(?:com|net|org|io|co|il|gov|edu|info|biz|app|dev|me|tv|shop|store|online|site|xyz|cloud|ai|ly|us|uk|de|fr|es|it|ru|jp|cn|in|br|au|ca|nl|se|no|dk|fi|pl|tr|gr|pt|cz|ro|hu|at|ch|be|ie|nz|za|mx|ar|cl|kr|sg|hk|tw|th|vn|id|my|ph|ae|sa|eg|ma|ng|ke)(?:\.[a-z]{2})?(?:[\/?#][^\s<>"'`֐-׿]*)?)/gi;
+
+  function trimTrailing(u) {
+    var out = u;
+    for (;;) {
+      var last = out.charAt(out.length - 1);
+      if (!last) break;
+      if (".,;:!?'\"׳״”’".indexOf(last) !== -1) { out = out.slice(0, -1); continue; }
+      if (last === ")" && (out.split("(").length - 1) < (out.split(")").length - 1)) { out = out.slice(0, -1); continue; }
+      if (last === "]" && (out.split("[").length - 1) < (out.split("]").length - 1)) { out = out.slice(0, -1); continue; }
+      break;
+    }
+    return out;
+  }
+
+  function normalize(u) {
+    return /^[a-z][a-z0-9+.-]*:\/\//i.test(u) ? u : "https://" + u;
+  }
+
+  /* רק http/https — חוסם javascript:, data:, file: וכל סכימה מסוכנת אחרת */
+  function isSafeScheme(u) {
+    try {
+      var p = new URL(normalize(u)).protocol;
+      return p === "http:" || p === "https:";
+    } catch (e) { return false; }
+  }
+
+  function findAll(text) {
+    var s = String(text == null ? "" : text), out = [], m;
+    URL_RE.lastIndex = 0;
+    while ((m = URL_RE.exec(s)) !== null) {
+      var clean = trimTrailing(m[1]);
+      if (clean && isSafeScheme(clean)) out.push({ start: m.index, end: m.index + clean.length, raw: clean, href: normalize(clean) });
+    }
+    return out;
+  }
+
+  function firstLink(text) { var a = findAll(text); return a.length ? a[0] : null; }
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  /* ── הפיכת טקסט הודעה ל-HTML בטוח עם קישורים לחיצים ────────────────────────
+     הטקסט עובר escape מלא לפני הזרקה — כך שגם אם משתמש שולח תגי HTML הם
+     יוצגו כטקסט ולא ירוצו. שורות חדשות הופכות ל-<br/> (Enter מוסיף שורה). */
+  function linkify(text) {
+    var s = String(text == null ? "" : text), html = "", last = 0, found = findAll(s), i;
+    for (i = 0; i < found.length; i++) {
+      var f = found[i];
+      html += esc(s.slice(last, f.start));
+      html += '<a class="wdl-a" href="' + esc(f.href) + '" data-wdl="' + esc(f.href) +
+              '" target="_blank" rel="noopener noreferrer nofollow">' + esc(f.raw) + "</a>";
+      last = f.end;
+    }
+    html += esc(s.slice(last));
+    return html.replace(/\n/g, "<br/>");
+  }
+
+  /* ── ניתוח סיכון מקומי בלבד (ללא שום שירות צד שלישי) ──────────────────────
+     המטרה אינה לקבוע שקישור מסוכן, אלא לזהות מאפיינים טכניים חריגים
+     שמצדיקים לבקש מהמשתמש לוודא את הכתובת לפני המעבר. */
+  function analyze(u) {
+    var reasons = [], url;
+    try { url = new URL(normalize(u)); } catch (e) {
+      return { suspicious: true, reasons: ["הכתובת אינה תקינה"], domain: "" };
+    }
+    var host = url.hostname, raw = String(u);
+
+    if (/(^|\.)xn--/i.test(host)) reasons.push("שם האתר כתוב בתווים מיוחדים שעשויים להיראות כמו אותיות רגילות");
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host) || host.indexOf(":") !== -1) reasons.push("הכתובת מפנה למספר IP במקום לשם אתר");
+    if (url.port && url.port !== "80" && url.port !== "443") reasons.push("הכתובת משתמשת בפורט לא סטנדרטי (" + esc(url.port) + ")");
+    if (url.username || url.password) reasons.push("הכתובת מכילה פרטי התחברות מוטמעים");
+    if (raw.split("#")[0].split("?")[0].indexOf("@") !== -1) reasons.push("הכתובת מכילה תו @ שעלול להסתיר את היעד האמיתי");
+    if (host.split(".").filter(Boolean).length >= 5) reasons.push("הכתובת מכילה מספר חריג של תת-דומיינים");
+    if (url.href.length > 180) reasons.push("הכתובת ארוכה במיוחד");
+    if ((url.href.match(/%[0-9a-f]{2}/gi) || []).length >= 6) reasons.push("הכתובת מכילה קידוד תווים חריג");
+
+    /* ערבוב אלפביתים בשם הדומיין — סימן מובהק להתחזות ויזואלית */
+    var scripts = 0;
+    if (/[Ѐ-ӿ]/.test(host)) scripts++;   /* קירילי */
+    if (/[Ͱ-Ͽ]/.test(host)) scripts++;   /* יווני */
+    if (/[֐-׿]/.test(host)) scripts++;   /* עברי */
+    if (/[a-z]/i.test(host)) scripts++;            /* לטיני */
+    if (scripts > 1) reasons.push("שם האתר מערבב אלפביתים שונים");
+
+    return { suspicious: reasons.length > 0, reasons: reasons, domain: host.replace(/^www\./i, "") };
+  }
+
+  /* ── משיכת תצוגה מקדימה מהפונקציה שלנו (לא צד שלישי) ─────────────────────── */
+  var pvCache = {}, pvAbort = null;
+  function fetchPreview(u) {
+    var href = normalize(u);
+    if (pvCache[href] !== undefined) return Promise.resolve(pvCache[href]);
+    if (pvAbort) { try { pvAbort.abort(); } catch (e) {} }
+    var ctrl = new AbortController(); pvAbort = ctrl;
+    return fetch(ENDPOINT + "?url=" + encodeURIComponent(href), { signal: ctrl.signal })
+      .then(function (r) { return r.json(); })
+      .then(function (j) {
+        var p = (j && j.ok && j.preview) ? j.preview : null;
+        if (p) pvCache[href] = p;
+        return p;
+      })
+      .catch(function () { return null; })
+      .then(function (p) { if (pvAbort === ctrl) pvAbort = null; return p; });
+  }
+
+  /* ── הגדרות שנשמרות ברמת המשתמש (בשרת, לא במכשיר) ────────────────────────── */
+  var cfg = { loadPref: function () { return Promise.resolve(false); }, savePref: function () { return Promise.resolve(); } };
+  var skipWarn = false;
+
+  function init(options) {
+    options = options || {};
+    if (options.loadPref) cfg.loadPref = options.loadPref;
+    if (options.savePref) cfg.savePref = options.savePref;
+    ensureStyles();
+    cfg.loadPref().then(function (v) { skipWarn = !!v; }).catch(function () {});
+    document.addEventListener("click", onDocClick, true);
+  }
+
+  /* ── לחיצה על קישור בתוך הודעה ───────────────────────────────────────────── */
+  function onDocClick(e) {
+    var a = e.target && e.target.closest ? e.target.closest("a[data-wdl]") : null;
+    if (!a) return;
+    var href = a.getAttribute("data-wdl") || a.getAttribute("href");
+    if (!href) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openExternal(href);
+  }
+
+  function openExternal(href, preview) {
+    var risk = analyze(href);
+    /* מאפיינים חריגים גוברים על העדפת המשתמש — האזהרה תוצג תמיד */
+    if (!risk.suspicious && skipWarn) { go(href); return; }
+    showExitDialog(href, risk, preview || pvCache[normalize(href)] || null);
+  }
+
+  function go(href) {
+    var w = window.open(href, "_blank", "noopener,noreferrer");
+    if (w) { try { w.opener = null; } catch (e) {} }
+  }
+
+  /* ── חלון היציאה ─────────────────────────────────────────────────────────── */
+  function showExitDialog(href, risk, preview) {
+    var warn = risk.suspicious;
+    var ov = document.createElement("div");
+    ov.className = "wdl-ov";
+    var pvHtml = "";
+    if (preview && (preview.title || preview.image || preview.description)) {
+      pvHtml =
+        '<div class="wdl-dlg-pv">' +
+          (preview.image ? '<img src="' + esc(preview.image) + '" alt="" onerror="this.remove()"/>' : "") +
+          '<div class="wdl-dlg-pv-t">' +
+            (preview.title ? '<div class="wdl-dlg-pv-title">' + esc(preview.title) + "</div>" : "") +
+            (preview.description ? '<div class="wdl-dlg-pv-desc">' + esc(preview.description) + "</div>" : "") +
+          "</div>" +
+        "</div>";
+    }
+    var reasonsHtml = warn
+      ? '<ul class="wdl-reasons">' + risk.reasons.map(function (r) { return "<li>" + esc(r) + "</li>"; }).join("") + "</ul>"
+      : "";
+
+    ov.innerHTML =
+      '<div class="wdl-dlg' + (warn ? " warn" : "") + '" role="dialog" aria-modal="true" aria-labelledby="wdl-dlg-title">' +
+        '<div class="wdl-ic">' + (warn
+          ? '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+          : '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>') +
+        "</div>" +
+        '<div class="wdl-title" id="wdl-dlg-title">' + (warn ? "שים לב — כדאי לוודא את הכתובת" : "מעבר לאתר חיצוני") + "</div>" +
+        '<div class="wdl-sub">' + (warn
+          ? "זוהו בכתובת מאפיינים טכניים חריגים. אין בכך כדי לקבוע שהאתר מסוכן, אך מומלץ לוודא שהכתובת היא זו שהתכוונת אליה."
+          : "הקישור מוביל לאתר חיצוני שאינו חלק מהמערכת.") + "</div>" +
+        '<div class="wdl-domain-wrap"><div class="wdl-domain-l">כתובת היעד</div><div class="wdl-domain" dir="ltr">' + esc(risk.domain || href) + "</div></div>" +
+        reasonsHtml +
+        pvHtml +
+        (warn ? "" : '<label class="wdl-chk"><input type="checkbox" id="wdl-skip"/><span>אל תציג הודעה זו שוב</span></label>') +
+        '<div class="wdl-btns">' +
+          '<button class="wdl-btn wdl-go' + (warn ? " warn" : "") + '">' + (warn ? "המשך בכל זאת" : "המשך לאתר") + "</button>" +
+          '<button class="wdl-btn wdl-cancel">ביטול</button>' +
+        "</div>" +
+      "</div>";
+
+    document.body.appendChild(ov);
+    requestAnimationFrame(function () { ov.classList.add("show"); });
+
+    function close() { ov.classList.remove("show"); setTimeout(function () { ov.remove(); }, 180); }
+    ov.querySelector(".wdl-cancel").onclick = close;
+    ov.addEventListener("click", function (e) { if (e.target === ov) close(); });
+    document.addEventListener("keydown", function onKey(e) {
+      if (e.key === "Escape") { close(); document.removeEventListener("keydown", onKey); }
+    });
+    ov.querySelector(".wdl-go").onclick = function () {
+      var chk = ov.querySelector("#wdl-skip");
+      if (chk && chk.checked) { skipWarn = true; cfg.savePref(true).catch(function () {}); }
+      close();
+      go(href);
+    };
+    var goBtn = ov.querySelector(".wdl-go");
+    if (goBtn) goBtn.focus();
+  }
+
+  /* ── תצוגה מקדימה בשדה הכתיבה ────────────────────────────────────────────── */
+  function attachComposer(opts) {
+    var input = opts.input, mount = opts.mount;
+    if (!input || !mount) return null;
+    var state = { url: null, preview: null, dismissed: {}, timer: null, seq: 0 };
+
+    function render() {
+      if (!state.preview) { mount.innerHTML = ""; mount.classList.remove("show"); return; }
+      var p = state.preview;
+      mount.innerHTML =
+        '<div class="wdl-pv">' +
+          (p.image ? '<img class="wdl-pv-img" src="' + esc(p.image) + '" alt="" onerror="this.remove()"/>' : "") +
+          '<div class="wdl-pv-body">' +
+            '<div class="wdl-pv-site">' + esc(p.siteName || p.domain || "") + "</div>" +
+            (p.title ? '<div class="wdl-pv-title">' + esc(p.title) + "</div>" : "") +
+            (p.description ? '<div class="wdl-pv-desc">' + esc(p.description) + "</div>" : "") +
+          "</div>" +
+          '<button class="wdl-pv-x" type="button" aria-label="הסרת התצוגה המקדימה">' +
+            '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+          "</button>" +
+        "</div>";
+      mount.classList.add("show");
+      mount.querySelector(".wdl-pv-x").onclick = function () {
+        /* סגירה מסירה רק את התצוגה — הקישור נשאר בשדה ההודעה כפי שהוא */
+        if (state.url) state.dismissed[state.url] = true;
+        state.preview = null;
+        render();
+      };
+    }
+
+    function check() {
+      var link = firstLink(input.value);
+      if (!link) { state.url = null; state.preview = null; render(); return; }
+      if (link.href === state.url) return;              /* אותה כתובת — אין מה לעדכן */
+      state.url = link.href;
+      if (state.dismissed[link.href]) { state.preview = null; render(); return; }
+      var mySeq = ++state.seq;
+      mount.innerHTML = '<div class="wdl-pv loading"><div class="wdl-pv-spin"></div><span>טוען תצוגה מקדימה…</span></div>';
+      mount.classList.add("show");
+      fetchPreview(link.href).then(function (p) {
+        if (mySeq !== state.seq) return;                /* תשובה מיושנת — מתעלמים */
+        state.preview = p && (p.title || p.image || p.description) ? p : null;
+        if (!state.preview) { mount.innerHTML = ""; mount.classList.remove("show"); }
+        else render();
+      });
+    }
+
+    input.addEventListener("input", function () {
+      clearTimeout(state.timer);
+      state.timer = setTimeout(check, 450);             /* debounce — לא קורא לשרת על כל תו */
+    });
+
+    return {
+      /* מוחזר כדי לצרף להודעה בעת שליחה */
+      get: function () { return state.preview; },
+      clear: function () {
+        clearTimeout(state.timer);
+        state.seq++; state.url = null; state.preview = null; state.dismissed = {};
+        render();
+      }
+    };
+  }
+
+  /* ── כרטיס תצוגה מקדימה בתוך בועת ההודעה ─────────────────────────────────── */
+  function previewCardHtml(p) {
+    if (!p || !p.url) return "";
+    return '<a class="wdl-card" href="' + esc(p.url) + '" data-wdl="' + esc(p.url) + '" target="_blank" rel="noopener noreferrer nofollow">' +
+        (p.image ? '<img class="wdl-card-img" src="' + esc(p.image) + '" alt="" loading="lazy" onerror="this.remove()"/>' : "") +
+        '<div class="wdl-card-body">' +
+          '<div class="wdl-card-site">' + esc(p.siteName || p.domain || "") + "</div>" +
+          (p.title ? '<div class="wdl-card-title">' + esc(p.title) + "</div>" : "") +
+          (p.description ? '<div class="wdl-card-desc">' + esc(p.description) + "</div>" : "") +
+        "</div>" +
+      "</a>";
+  }
+
+  /* בונה את השדה שנשמר בהודעה */
+  function toMessageField(p) {
+    if (!p || !p.url) return null;
+    return {
+      url: String(p.url).slice(0, 500),
+      domain: String(p.domain || "").slice(0, 120),
+      title: String(p.title || "").slice(0, 140),
+      description: String(p.description || "").slice(0, 220),
+      image: String(p.image || "").slice(0, 500),
+      siteName: String(p.siteName || "").slice(0, 60)
+    };
+  }
+
+  /* ── סגנונות (מוזרקים פעם אחת; הצבעים מגיעים ממשתני --wdl-* של כל קובץ) ──── */
+  var stylesDone = false;
+  function ensureStyles() {
+    if (stylesDone) return; stylesDone = true;
+    var css = [
+      '.wdl-a{color:var(--wdl-accent);text-decoration:underline;text-underline-offset:2px;word-break:break-word;cursor:pointer}',
+      '.wdl-a:hover{opacity:.82}',
+      /* כרטיס בתוך בועת הודעה */
+      '.wdl-card{display:block;margin-top:7px;border:1px solid var(--wdl-border);border-radius:12px;overflow:hidden;background:var(--wdl-surface);text-decoration:none;color:inherit;max-width:280px}',
+      '.wdl-card:hover{border-color:var(--wdl-accent)}',
+      '.wdl-card-img{width:100%;max-height:140px;object-fit:cover;display:block}',
+      '.wdl-card-body{padding:8px 10px}',
+      '.wdl-card-site{font-size:10.5px;color:var(--wdl-muted);text-transform:uppercase;letter-spacing:.03em}',
+      '.wdl-card-title{font-size:13px;font-weight:700;margin-top:2px;line-height:1.35;color:var(--wdl-text)}',
+      '.wdl-card-desc{font-size:11.5px;color:var(--wdl-muted);margin-top:3px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+      /* תצוגה מקדימה מעל שדה ההקלדה */
+      '.wdl-mount{display:none}.wdl-mount.show{display:block;padding:0 14px 8px}',
+      '.wdl-pv{position:relative;display:flex;gap:10px;align-items:flex-start;border:1px solid var(--wdl-border);border-radius:12px;background:var(--wdl-surface);padding:9px 10px;animation:wdlIn .18s ease}',
+      '@keyframes wdlIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}',
+      '.wdl-pv.loading{align-items:center;gap:9px;font-size:12.5px;color:var(--wdl-muted)}',
+      '.wdl-pv-spin{width:15px;height:15px;border:2px solid var(--wdl-border);border-top-color:var(--wdl-accent);border-radius:50%;animation:wdlSpin .8s linear infinite;flex-shrink:0}',
+      '@keyframes wdlSpin{to{transform:rotate(360deg)}}',
+      '.wdl-pv-img{width:52px;height:52px;object-fit:cover;border-radius:8px;flex-shrink:0}',
+      '.wdl-pv-body{flex:1;min-width:0;padding-inline-end:22px}',
+      '.wdl-pv-site{font-size:10.5px;color:var(--wdl-muted);text-transform:uppercase;letter-spacing:.03em}',
+      '.wdl-pv-title{font-size:13px;font-weight:700;margin-top:1px;line-height:1.35;color:var(--wdl-text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
+      '.wdl-pv-desc{font-size:11.5px;color:var(--wdl-muted);margin-top:2px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+      '.wdl-pv-x{position:absolute;top:6px;inset-inline-end:6px;width:22px;height:22px;border:none;border-radius:50%;background:var(--wdl-chip);color:var(--wdl-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0}',
+      '.wdl-pv-x:hover{color:var(--wdl-text)}',
+      /* חלון היציאה */
+      '.wdl-ov{position:fixed;inset:0;background:rgba(8,18,32,.62);backdrop-filter:blur(4px);z-index:100000;display:flex;align-items:center;justify-content:center;padding:22px;opacity:0;transition:opacity .18s ease}',
+      '.wdl-ov.show{opacity:1}',
+      '.wdl-dlg{background:var(--wdl-card);border-radius:20px;padding:26px 24px;max-width:400px;width:100%;text-align:center;box-shadow:0 24px 64px rgba(8,18,32,.42);transform:translateY(10px) scale(.97);transition:transform .2s ease;max-height:88vh;overflow-y:auto}',
+      '.wdl-ov.show .wdl-dlg{transform:translateY(0) scale(1)}',
+      '.wdl-ic{width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 14px;background:var(--wdl-accent-soft);color:var(--wdl-accent)}',
+      '.wdl-dlg.warn .wdl-ic{background:var(--wdl-warn-soft);color:var(--wdl-warn)}',
+      '.wdl-title{font-size:18px;font-weight:800;color:var(--wdl-text);margin-bottom:7px}',
+      '.wdl-sub{font-size:13.5px;color:var(--wdl-muted);line-height:1.6;margin-bottom:16px}',
+      '.wdl-domain-wrap{background:var(--wdl-surface);border:1px solid var(--wdl-border);border-radius:12px;padding:10px 12px;margin-bottom:14px}',
+      '.wdl-domain-l{font-size:10.5px;color:var(--wdl-muted);margin-bottom:3px}',
+      '.wdl-domain{font-size:14.5px;font-weight:700;color:var(--wdl-text);word-break:break-all}',
+      '.wdl-reasons{text-align:start;margin:0 0 14px;padding-inline-start:18px;font-size:12.5px;color:var(--wdl-muted);line-height:1.7}',
+      '.wdl-dlg-pv{display:flex;gap:10px;align-items:flex-start;text-align:start;border:1px solid var(--wdl-border);border-radius:12px;padding:9px 10px;margin-bottom:14px;background:var(--wdl-surface)}',
+      '.wdl-dlg-pv img{width:48px;height:48px;object-fit:cover;border-radius:8px;flex-shrink:0}',
+      '.wdl-dlg-pv-t{min-width:0;flex:1}',
+      '.wdl-dlg-pv-title{font-size:13px;font-weight:700;color:var(--wdl-text);line-height:1.35}',
+      '.wdl-dlg-pv-desc{font-size:11.5px;color:var(--wdl-muted);margin-top:3px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}',
+      '.wdl-chk{display:flex;align-items:center;gap:8px;justify-content:center;font-size:13px;color:var(--wdl-muted);margin-bottom:16px;cursor:pointer;user-select:none}',
+      '.wdl-chk input{width:16px;height:16px;accent-color:var(--wdl-accent);cursor:pointer}',
+      '.wdl-btns{display:flex;flex-direction:column;gap:9px}',
+      '.wdl-btn{border:none;border-radius:11px;font-family:inherit;font-size:15px;font-weight:700;padding:13px;cursor:pointer}',
+      '.wdl-go{background:var(--wdl-accent);color:#fff}',
+      '.wdl-go.warn{background:var(--wdl-warn);color:#fff}',
+      '.wdl-cancel{background:var(--wdl-chip);color:var(--wdl-text)}',
+      '@media(max-width:480px){.wdl-dlg{padding:22px 18px}.wdl-card{max-width:100%}}'
+    ].join("\n");
+    var st = document.createElement("style");
+    st.textContent = css;
+    document.head.appendChild(st);
+  }
+
+  return {
+    init: init,
+    linkify: linkify,
+    analyze: analyze,
+    findAll: findAll,
+    firstLink: firstLink,
+    fetchPreview: fetchPreview,
+    attachComposer: attachComposer,
+    previewCardHtml: previewCardHtml,
+    toMessageField: toMessageField,
+    openExternal: openExternal,
+    setSkipPref: function (v) { skipWarn = !!v; }
+  };
+})();
+
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, get, set, remove, onValue, update, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
@@ -721,7 +1141,11 @@ ta.oninput = function() {
   const c = document.getElementById("msgs-container");
   c.scrollTop = c.scrollHeight;
 };
-ta.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMsg(); } };
+/* Enter תמיד מוסיף שורה חדשה במיקום הסמן — השליחה מתבצעת אך ורק בכפתור השליחה.
+   במכוון אין כאן preventDefault: ההוספה נעשית בהתנהגות הטבעית של ה-textarea, מה ששומר
+   על מיקום הסמן, על ה-undo התקין, ועל זהות התנהגות בין מחשב למקלדות iPhone/Android.
+   ה-stopPropagation מבטיח שאף מאזין חיצוני לא יפרש Enter כשליחה. */
+ta.onkeydown = e => { if (e.key === "Enter") e.stopPropagation(); };
 /* emoji buttons */
 document.querySelectorAll(".emoji-btn").forEach(b => b.onclick = () => addReaction(b.dataset.emoji));
 /* action sheet */
@@ -749,8 +1173,54 @@ function toggleTheme() {
   isDark = !isDark;
   document.body.classList.toggle("light", !isDark);
   localStorage.setItem("wdc_theme", isDark ? "dark" : "light");
+  applyChatBg(currentChatBg); /* #104 — התאמת רקע לתמה */
 }
 if (localStorage.getItem("wdc_theme") === "light") { isDark = false; document.body.classList.add("light"); }
+
+/* ── #104 — רקע הצ'אט (נשמר לפי משתמש ב-userPrefs, עוקב בין מכשירים) ── */
+const CHAT_BGS = [
+  { id: "default", name: "ברירת מחדל", light: "#f2f6fb", dark: "#0f1826" },
+  { id: "cream", name: "שמנת", light: "#f7f2e9", dark: "#1b1915" },
+  { id: "sky", name: "תכלת", light: "#e9f2fc", dark: "#0d1a2b" },
+  { id: "mint", name: "מנטה", light: "#e9f5ee", dark: "#0e1c16" },
+  { id: "lavender", name: "לבנדר", light: "#f0ecfb", dark: "#151223" },
+  { id: "rose", name: "ורוד", light: "#fbecf1", dark: "#20141a" },
+  { id: "sunset", name: "שקיעה", light: "linear-gradient(160deg,#fdeee2,#f9e3ee)", dark: "linear-gradient(160deg,#241a1e,#191622)" },
+  { id: "ocean", name: "אוקיינוס", light: "linear-gradient(160deg,#e6f0fb,#e4f5f2)", dark: "linear-gradient(160deg,#0d1a2b,#0b1f22)" },
+  { id: "doodle", name: "דוודל",
+    light: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='1.4'%3E%3Ccircle cx='12' cy='12' r='3.5'/%3E%3Cpath d='M33 7v9M28.5 11.5h9'/%3E%3Cpath d='M7 34h9M34 30v9'/%3E%3C/g%3E%3C/svg%3E") repeat, #f2f6fb`,
+    dark: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1.4'%3E%3Ccircle cx='12' cy='12' r='3.5'/%3E%3Cpath d='M33 7v9M28.5 11.5h9'/%3E%3Cpath d='M7 34h9M34 30v9'/%3E%3C/g%3E%3C/svg%3E") repeat, #10192a` },
+];
+let currentChatBg = "default";
+function bgValue(bg) { return isDark ? bg.dark : bg.light; }
+function applyChatBg(id) {
+  currentChatBg = id || "default";
+  const bg = CHAT_BGS.find(b => b.id === currentChatBg) || CHAT_BGS[0];
+  const el = document.getElementById("msgs-container");
+  if (el) el.style.background = bgValue(bg);
+}
+function listenChatBg(user) {
+  if (!user?.userId) return;
+  onValue(ref(db, `userPrefs/${user.userId}/chatBg`), snap => { applyChatBg(snap.val() || "default"); });
+}
+window.openBgPicker = () => {
+  document.getElementById("chat-opts-menu").classList.remove("show");
+  document.getElementById("bg-swatch-grid").innerHTML = CHAT_BGS.map(b =>
+    `<button class="bg-swatch${b.id === currentChatBg ? " sel" : ""}" data-id="${b.id}" onclick="pickChatBg('${b.id}')"><span class="bg-swatch-preview" style="background:${bgValue(b)}"></span><span class="bg-swatch-name">${b.name}</span></button>`).join("");
+  document.getElementById("bg-picker-overlay").classList.add("show");
+};
+window.closeBgPicker = () => document.getElementById("bg-picker-overlay").classList.remove("show");
+window.pickChatBg = async (id) => {
+  applyChatBg(id);
+  document.querySelectorAll("#bg-swatch-grid .bg-swatch").forEach(el => el.classList.toggle("sel", el.dataset.id === id));
+  if (currentUser?.userId) await set(ref(db, `userPrefs/${currentUser.userId}/chatBg`), id).catch(() => {});
+  setTimeout(closeBgPicker, 250);
+};
+document.getElementById("chat-opts-btn").onclick = (e) => { e.stopPropagation(); document.getElementById("chat-opts-menu").classList.toggle("show"); };
+document.addEventListener("click", (e) => {
+  const menu = document.getElementById("chat-opts-menu"), btn = document.getElementById("chat-opts-btn");
+  if (menu?.classList.contains("show") && !menu.contains(e.target) && btn && !btn.contains(e.target)) menu.classList.remove("show");
+});
 
 /* ── כניסה (#141 — אותה מערכת team שמשמשת את admin.html) ── */
 function genToken() { return Math.random().toString(36).slice(2) + Date.now().toString(36); }
@@ -842,8 +1312,10 @@ function enterApp(user) {
   setupAgentPresence(user);
   listenMySession(user);
   checkPermNotify(user);
+  listenChatBg(user); /* #104 — טעינת רקע לפי המשתמש */
   const canChat = user.role === "admin" || !!user.perms?.chat;
   if (!canChat) { showNoChatPermission(user); return; }
+  wdlSetup(); /* מנגנון הקישורים — חיווט השדה וטעינת העדפת האזהרה מהשרת */
   showList();
 }
 
@@ -907,9 +1379,23 @@ function listenMySession(user) {
     const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
     if (ses.deviceToken === "REVOKED" || (ses.deviceToken && ses.deviceToken !== saved.deviceToken)) {
       localStorage.removeItem(SESSION_KEY);
-      location.reload();
+      showSecurityLogoutPopup(); /* #107 — פופאפ במקום רענון שקט */
     }
   });
+}
+/* #107 — חלון "ניתקנו אותך לצורך אבטחה" (בסגנון חלונות ההרשאות) */
+function showSecurityLogoutPopup() {
+  if (document.getElementById("sec-logout-pop")) return;
+  const ov = document.createElement("div");
+  ov.id = "sec-logout-pop";
+  ov.style.cssText = "position:fixed;inset:0;z-index:9997;background:rgba(0,0,0,.6);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:24px";
+  ov.innerHTML = `<div class="action-sheet" style="border-radius:24px;padding:30px 24px;max-width:340px;text-align:center;animation:none">
+    <div style="width:56px;height:56px;border-radius:50%;background:rgba(245,158,11,.14);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;color:var(--warn)"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="16.5" x2="12.01" y2="16.5"/></svg></div>
+    <div style="font-size:18px;font-weight:800;margin-bottom:8px">ניתקנו אותך לצורך אבטחה</div>
+    <div style="font-size:14px;color:var(--txt2);line-height:1.6;margin-bottom:22px">מטעמי אבטחה התנתקת מהמערכת. ניתן להתחבר מחדש.</div>
+    <button onclick="location.reload()" style="width:100%;background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">התחברות מחדש</button>
+  </div>`;
+  document.body.appendChild(ov);
 }
 
 function doLogout() {
@@ -1213,7 +1699,9 @@ function renderMsgs(msgs) {
             if (m.oneTime && mineImg) return `<span class="ot-sent"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="10" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg> ${m.viewed ? "נצפתה" : "תמונה חד-פעמית"}</span>`;
             return window.imgSkeletonHTML(m.imageUrl, m.text || "");
           })()
-        : `${m.text}${m.edited ? `<span class="msg-edited">(נערך)</span>` : ""}`;
+        /* WDLinks.linkify עושה escape מלא ואז הופך כתובות לקישורים לחיצים —
+           זה גם מה שסוגר את הזרקת ה-HTML שהייתה כאן (m.text הוזרק גולמי). */
+        : `${window.WDLinks.linkify(m.text)}${m.edited ? `<span class="msg-edited">(נערך)</span>` : ""}${window.WDLinks.previewCardHtml(m.linkPreview)}`;
 
     /* status */
     let statusHtml = "";
@@ -1343,6 +1831,30 @@ function renderMsgs(msgs) {
   }
 }
 
+/* ── מנגנון הקישורים (WDLinks) ──────────────────────────────────────────────
+   ההעדפה "אל תציג הודעה זו שוב" נשמרת ב-userPrefs לפי מזהה המשתמש — ולכן
+   עוקבת אחרי הנציג בין המובייל לדשבורד ובכל מכשיר, ולא נשמרת בדפדפן. */
+let wdlComposer = null;
+window.WDLinks.init({
+  loadPref: async () => {
+    if (!currentUser?.userId) return false;
+    try { const s = await get(ref(db, `userPrefs/${currentUser.userId}/skipLinkWarning`)); return s.exists() && s.val() === true; }
+    catch (e) { return false; }
+  },
+  savePref: async (v) => {
+    if (!currentUser?.userId) return;
+    try { await set(ref(db, `userPrefs/${currentUser.userId}/skipLinkWarning`), !!v); } catch (e) {}
+  }
+});
+function wdlSetup() {
+  const inp = document.getElementById("chat-ta"), mnt = document.getElementById("wdl-mount");
+  if (inp && mnt && !wdlComposer) wdlComposer = window.WDLinks.attachComposer({ input: inp, mount: mnt });
+  if (currentUser?.userId) {
+    get(ref(db, `userPrefs/${currentUser.userId}/skipLinkWarning`))
+      .then(s => window.WDLinks.setSkipPref(s.exists() && s.val() === true)).catch(() => {});
+  }
+}
+
 /* ── שליחת הודעה ── */
 async function sendMsg() {
   const text = document.getElementById("chat-ta").value.trim();
@@ -1351,15 +1863,21 @@ async function sendMsg() {
   try {
     const key = `msg_${Date.now()}`;
     const msg = { text, at: Date.now(), sender: "agent", agentRead: true, clientRead: false, agentName: currentUser?.name || "נציג" };
+    /* תצוגה מקדימה פעילה נשלחת עם ההודעה; אם המשתמש סגר אותה — הקישור בלבד */
+    const wdlField = window.WDLinks.toMessageField(wdlComposer && wdlComposer.get());
+    if (wdlField) msg.linkPreview = wdlField;
     if (replyTo) { msg.replyTo = buildReplyMeta(replyTo); cancelReply(); }
     await set(ref(db, `clients/${curPhone}/messages/${key}`), msg);
     /* #136 — שליחת הודעה מאפסת את מניין 15 הדקות ומרעננת את הנעילה */
     resetChatIdle();
     set(ref(db, `clients/${curPhone}/chatLock/at`), Date.now()).catch(()=>{});
+    /* #134 — חותם שהשיחה מטופלת ע"י נציג (מאפשר ללקוח לדווח) */
+    set(ref(db, `clients/${curPhone}/handledBy`), { id: currentUser?.userId || "agent", name: currentUser?.name || "נציג", role: currentUser?.role === "admin" ? "admin" : "agent", at: Date.now() }).catch(()=>{});
     /* #2 — סימון מי פתח (אם אין עדיין) */
     try{const ob=await get(ref(db,`clients/${curPhone}/openedBy`));if(!ob.exists())await set(ref(db,`clients/${curPhone}/openedBy`),{role:"agent",name:currentUser?.name||"נציג",at:Date.now()});}catch(_){}
     document.getElementById("chat-ta").value = "";
     document.getElementById("chat-ta").style.height = "";
+    if (wdlComposer) wdlComposer.clear();
     sendTyping(false);
   } catch (e) { toast("שגיאה בשליחה"); } finally { btn.disabled = false; }
 }
@@ -1618,24 +2136,8 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
     function avUrl(s,b,g){return AV_BASE+"?seed="+s+"&backgroundColor="+b+"&gender="+g;}
     
 
-    /* ── דירוג כוכבים ── */
-    let selectedRating = 0;
-    function showRating() {
-      selectedRating = 0;
-      document.querySelectorAll(".rating-star").forEach(s => s.classList.remove("active"));
-      document.getElementById("rating-overlay").classList.add("show");
-    }
-    document.querySelectorAll(".rating-star").forEach(star => {
-      star.onclick = async () => {
-        selectedRating = parseInt(star.dataset.v);
-        document.querySelectorAll(".rating-star").forEach((s,i) => s.classList.toggle("active", i < selectedRating));
-        if (curPhone) await set(ref(db, "clients/"+curPhone+"/rating"), selectedRating);
-        setTimeout(() => document.getElementById("rating-overlay").classList.remove("show"), 600);
-        toast("תודה על הדירוג ⭐");
-      };
-    });
-    document.getElementById("rating-skip").onclick = () => document.getElementById("rating-overlay").classList.remove("show");
-    
+    /* דירוג השיחה מנוהל כעת בצד הלקוח (index.html, #137) — הקוד הישן (כוכבי אימוג'י) הוסר. */
+
 
     /* ── #136 — נעילת שיחה: נציג/מנהל אחד בלבד בשיחה בו-זמנית (דשבורד או מובייל) ── */
     function surfaceHeb(s){ return s==="mobile" ? "צ'אט מובייל" : "דשבורד"; }
@@ -1819,8 +2321,13 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       img.addEventListener("dblclick",e=>{e.stopPropagation();clbScale=clbScale>1?1:2.5;clbX=0;clbY=0;clbApply();});
       img.addEventListener("touchstart",e=>{if(e.touches.length===2){clbSD=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);clbSS=clbScale;}else if(e.touches.length===1&&clbScale>1){clbLX=e.touches[0].clientX;clbLY=e.touches[0].clientY;}},{passive:true});
       img.addEventListener("touchmove",e=>{if(e.touches.length===2){e.preventDefault();const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);clbScale=Math.min(5,Math.max(1,clbSS*(d/clbSD)));if(clbScale===1){clbX=0;clbY=0;}clbApply();}else if(e.touches.length===1&&clbScale>1){e.preventDefault();clbX+=e.touches[0].clientX-clbLX;clbY+=e.touches[0].clientY-clbLY;clbLX=e.touches[0].clientX;clbLY=e.touches[0].clientY;clbApply();}},{passive:false});
-      lb.addEventListener("click",e=>{if(e.target===lb){lb.classList.remove("show");clbReset();cFinalizeOneTime();}});
-      img.addEventListener("click",e=>e.stopPropagation());
+      /* #103 — סגירה אחידה: כפתור X, לחיצה על הרקע, ולחיצה על התמונה עצמה */
+      const cCloseLb=()=>{lb.classList.remove("show");clbReset();cFinalizeOneTime();};
+      window.closeLightbox=cCloseLb;
+      lb.addEventListener("click",e=>{if(e.target===lb)cCloseLb();});
+      let clbClickTimer=null;
+      img.addEventListener("click",e=>{e.stopPropagation();if(clbScale>1)return;clearTimeout(clbClickTimer);clbClickTimer=setTimeout(cCloseLb,240);});
+      img.addEventListener("dblclick",()=>clearTimeout(clbClickTimer));
     })();
 
     /* תמונה חד-פעמית — צפייה עד סגירה, ואז חסימה + מחיקת URL מהשרת (#35) */
@@ -1853,11 +2360,11 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
       if (file.size > 10 * 1024 * 1024) { toast("הקובץ גדול מדי — מקסימום 10MB"); return; }
       cPendingFile=file; cPendingOneTime=false;
       const r=new FileReader();
-      r.onload=ev=>{document.getElementById("cimg-thumb").src=ev.target.result;document.getElementById("cimg-onetime").classList.remove("active");document.getElementById("cimg-caption").value="";document.getElementById("cimg-preview").classList.add("show");};
+      r.onload=ev=>{document.getElementById("cimg-thumb").src=ev.target.result;document.getElementById("cimg-onetime").classList.remove("active");document.getElementById("cimg-ot-hint").classList.remove("show");document.getElementById("cimg-caption").value="";document.getElementById("cimg-preview").classList.add("show");};
       r.readAsDataURL(file);
     };
     window.cCancelPreview=()=>{cPendingFile=null;cPendingOneTime=false;document.getElementById("cimg-preview").classList.remove("show");};
-    window.cToggleOneTime=()=>{cPendingOneTime=!cPendingOneTime;document.getElementById("cimg-onetime").classList.toggle("active",cPendingOneTime);};
+    window.cToggleOneTime=()=>{cPendingOneTime=!cPendingOneTime;document.getElementById("cimg-onetime").classList.toggle("active",cPendingOneTime);document.getElementById("cimg-ot-hint").classList.toggle("show",cPendingOneTime);};
     window.cSendImg=async()=>{
       if(!cPendingFile||!curPhone)return;
       const file=cPendingFile, caption=document.getElementById("cimg-caption").value.trim(), oneTime=cPendingOneTime;
@@ -1882,6 +2389,8 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
         /* #136 — שליחת תמונה מאפסת את מניין 15 הדקות ומרעננת נעילה */
         resetChatIdle();
         set(ref(db,`clients/${curPhone}/chatLock/at`),Date.now()).catch(()=>{});
+        /* #134 — חותם שהשיחה מטופלת ע"י נציג */
+        set(ref(db,`clients/${curPhone}/handledBy`),{id:currentUser?.userId||"agent",name:currentUser?.name||"נציג",role:currentUser?.role==="admin"?"admin":"agent",at:Date.now()}).catch(()=>{});
         pend.remove(); /* יוחלף בהודעה האמיתית מה-listener */
         toast("✓ תמונה נשלחה");
       }catch(err){pend.remove();toast("שגיאה בהעלאה");console.error(err);}
@@ -1911,22 +2420,16 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
 
 </script>
 
-  <!-- Rating overlay -->
-  <div class="rating-overlay" id="rating-overlay">
-    <div class="rating-sheet">
-      <div style="width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:12px auto 20px"></div>
-      <div style="font-size:18px;font-weight:800;margin-bottom:8px">איך הייתה השיחה?</div>
-      <div style="font-size:14px;color:var(--txt2);margin-bottom:4px">דרג את שירות הנציג</div>
-      <div class="rating-stars" id="rating-stars">
-        <span class="rating-star" data-v="1">⭐</span>
-        <span class="rating-star" data-v="2">⭐</span>
-        <span class="rating-star" data-v="3">⭐</span>
-        <span class="rating-star" data-v="4">⭐</span>
-        <span class="rating-star" data-v="5">⭐</span>
-      </div>
-      <button id="rating-skip" style="background:none;border:none;color:var(--txt3);font-family:'Heebo',sans-serif;font-size:14px;cursor:pointer;padding:8px;width:100%">דלג</button>
+  <!-- #104 — בורר רקע לצ'אט -->
+  <div class="bg-picker-overlay" id="bg-picker-overlay" onclick="if(event.target===this)closeBgPicker()">
+    <div class="bg-picker-card">
+      <div class="bg-picker-title">רקע הצ'אט</div>
+      <div class="bg-picker-sub">הבחירה נשמרת לחשבון שלך ועוקבת אחריך בכל מכשיר</div>
+      <div class="bg-swatch-grid" id="bg-swatch-grid"></div>
+      <button class="bg-picker-close" onclick="closeBgPicker()">סגור</button>
     </div>
-  </div>  <!-- ════ CONFIRM SHEET (#28) ════ -->
+  </div>
+  <!-- ════ CONFIRM SHEET (#28) ════ -->
   <div class="sheet-overlay" id="confirm-overlay">
     <div class="action-sheet" style="padding:24px 24px calc(24px + var(--safe-bot))">
       <div class="as-handle"></div>
@@ -1946,11 +2449,13 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
   <div class="cimg-top">
     <button class="cimg-x" onclick="cCancelPreview()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <span>שליחת תמונה</span>
-    <button class="cimg-ot" id="cimg-onetime" onclick="cToggleOneTime()" title="צפייה חד-פעמית"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="11" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg></button>
+    <span style="width:40px;flex-shrink:0"></span>
   </div>
   <div class="cimg-wrap"><img id="cimg-thumb" src="" alt="תצוגה"/></div>
+  <div class="cimg-ot-hint" id="cimg-ot-hint"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="11" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg>התמונה תישלח לצפייה חד-פעמית — תיעלם אחרי צפייה אחת</div>
   <div class="cimg-bottom">
     <input type="text" id="cimg-caption" class="cimg-caption" placeholder="הוסף כיתוב (אופציונלי)..."/>
+    <button class="cimg-ot" id="cimg-onetime" onclick="cToggleOneTime()" title="צפייה חד-פעמית"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><text x="12" y="16" font-size="11" font-weight="bold" text-anchor="middle" fill="currentColor" stroke="none">1</text></svg></button>
     <button class="cimg-send" id="cimg-send" onclick="cSendImg()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg></button>
   </div>
 </div>
