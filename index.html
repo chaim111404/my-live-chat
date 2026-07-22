@@ -356,6 +356,7 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
     <div class="login-sub">כניסה לנציג</div>
     <div class="lf"><label class="ll">שם משתמש</label><input id="lu" class="li" type="text" autocomplete="off" placeholder="שם משתמש"/></div>
     <div class="lf"><label class="ll">סיסמה</label><input id="lp" class="li" type="password" placeholder="••••••••"/></div>
+    <div class="lf" id="l2fa-wrap" style="display:none"><label class="ll">קוד אימות מהאפליקציה</label><input id="l2fa" class="li" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="6 ספרות" dir="ltr" style="text-align:center;letter-spacing:.25em"/></div>
     <button class="login-btn" id="login-btn">כניסה</button>
     <div class="lerr" id="lerr"></div>
   </div>
@@ -723,7 +724,7 @@ window.WDLinks = (function () {
           ? '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
           : '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>') +
         "</div>" +
-        '<div class="wdl-title" id="wdl-dlg-title">' + (warn ? "שים לב  כדאי לוודא את הכתובת" : "מעבר לאתר חיצוני") + "</div>" +
+        '<div class="wdl-title" id="wdl-dlg-title">' + (warn ? "שים לב — כדאי לוודא את הכתובת" : "מעבר לאתר חיצוני") + "</div>" +
         '<div class="wdl-sub">' + (warn
           ? "זוהו בכתובת מאפיינים טכניים חריגים. אין בכך כדי לקבוע שהאתר מסוכן, אך מומלץ לוודא שהכתובת היא זו שהתכוונת אליה."
           : "הקישור מוביל לאתר חיצוני שאינו חלק מהמערכת.") + "</div>" +
@@ -922,9 +923,106 @@ window.WDLinks = (function () {
 })();
 
 </script>
+<script>
+/* ═══════════════════════════════════════════════════════════════════════════
+   WDAuth — שכבת זהות משותפת לשלושת ממשקי הצ'אט.
+
+   עד היום לא הייתה למערכת זהות Firebase: הכללים היו פתוחים לכולם, והתפקיד
+   ("מנהל"/"נציג") נקבע בדפדפן. השכבה הזו מוסיפה זהות אמיתית — הפונקציה
+   authLogin מאמתת את הפרטים בצד השרת ומחזירה Custom Token עם התפקיד
+   וההרשאות צרובים בתוכו, כך שכללי ה-RTDB יוכלו לאכוף אותם.
+
+   חשוב: חוויית ההתחברות של המשתמש לא משתנה — אותם שדות, אותה לחיצה.
+   בשלב הזה הכניסה נשארת המנגנון הקיים, וה-Auth מתווסף לצידו; לכן כשל כאן
+   לעולם לא חוסם כניסה של משתמש אמיתי.
+   ═══════════════════════════════════════════════════════════════════════════ */
+window.WDAuth = (function () {
+  var ENDPOINT = "https://us-central1-deshbord-atarim-sheli.cloudfunctions.net/authLogin";
+  var _auth = null, _signIn = null, _lastProfile = null, _onAuthChanged = null;
+
+  /* מוזרק מקובץ המודול (שם נמצאים ה-imports של Firebase) */
+  function init(opts) {
+    _auth = opts && opts.auth ? opts.auth : null;
+    _signIn = opts && opts.signInWithCustomToken ? opts.signInWithCustomToken : null;
+  }
+
+  function ready() { return !!(_auth && _signIn); }
+
+  /* ממתין לשחזור זהות Firebase (אסינכרוני) לפני שמחליטים אם המשתמש מחובר.
+     בלי זה היינו מנתקים משתמש רק מפני שה-SDK עוד לא סיים לטעון. */
+  var _authReady = null;
+  function waitForAuth() {
+    if (_authReady) return _authReady;
+    _authReady = new Promise(function (resolve) {
+      if (!_auth) { resolve(null); return; }
+      if (_auth.currentUser) { resolve(_auth.currentUser); return; }
+      var done = false;
+      var unsub = _onAuthChanged ? _onAuthChanged(_auth, function (u) {
+        if (done) return; done = true;
+        try { unsub && unsub(); } catch (e) {}
+        resolve(u || null);
+      }) : null;
+      /* רשת ביטחון — לא נתקעים אם המאזין לא נורה */
+      setTimeout(function () { if (!done) { done = true; resolve(_auth.currentUser || null); } }, 4000);
+    });
+    return _authReady;
+  }
+
+
+  /* מחזיר {ok,profile} או {ok:false,error}. לעולם לא זורק. */
+  function serverLogin(payload) {
+    return fetch(ENDPOINT, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload)
+    })
+      .then(function (r) { return r.json().catch(function () { return null; }); })
+      .then(function (j) {
+        /* השרת מסמן שנדרש שלב שני — זה לא כשל אימות אלא בקשה לקוד */
+        if (j && j.needTotp) return {ok: false, needTotp: true, error: "totp-required"};
+        if (!j || !j.ok || !j.token) return {ok: false, error: (j && j.error) || "server-error"};
+        _lastProfile = j.profile || null;
+        if (!ready()) return {ok: true, profile: j.profile, signedIn: false};
+        return _signIn(_auth, j.token)
+          .then(function () { return {ok: true, profile: j.profile, signedIn: true}; })
+          .catch(function () { return {ok: true, profile: j.profile, signedIn: false}; });
+      })
+      .catch(function () { return {ok: false, error: "network"}; });
+  }
+
+  function loginClient(phone, pin) { return serverLogin({mode: "client", phone: phone, pin: pin}); }
+  function loginTeam(username, password, totp) { return serverLogin({mode: "team", username: username, password: password, totp: totp || undefined}); }
+
+  function currentUser() { return _auth && _auth.currentUser ? _auth.currentUser : null; }
+  function isSignedIn() { return !!currentUser(); }
+  function profile() { return _lastProfile; }
+
+  /* התפקיד וההרשאות נקראים מהטוקן שהשרת חתם עליו — לא ממשתנה בדפדפן */
+  function claims() {
+    var u = currentUser();
+    if (!u) return Promise.resolve(null);
+    return u.getIdTokenResult().then(function (r) { return r.claims || null; }).catch(function () { return null; });
+  }
+
+  function signOut() {
+    _lastProfile = null;
+    if (_auth && _auth.signOut) { try { return _auth.signOut(); } catch (e) {} }
+    return Promise.resolve();
+  }
+
+  return {
+    init: init, ready: ready,
+    loginClient: loginClient, loginTeam: loginTeam,
+    currentUser: currentUser, isSignedIn: isSignedIn, waitForAuth: waitForAuth,
+    profile: profile, claims: claims, signOut: signOut
+  };
+})();
+
+</script>
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getDatabase, ref, get, set, remove, onValue, update, onDisconnect, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 const _a = initializeApp({
@@ -937,6 +1035,9 @@ const _a = initializeApp({
   appId:"1:893227581235:web:3254c85705dfe5fe894846"
 });
 const db = getDatabase(_a);
+const _authApp = getAuth(_a);
+/* שכבת הזהות — מאמתת בשרת ומקבלת Custom Token עם התפקיד וההרשאות */
+window.WDAuth.init({ auth: _authApp, signInWithCustomToken: signInWithCustomToken, onAuthStateChanged: onAuthStateChanged });
 
 /* ════════════════════════════════════════════════════════════════
    מודול טעינת תמונות חכם (skeleton + retry + offline)
@@ -1069,7 +1170,7 @@ const storage = getStorage(_a);
 /* ── קבועים ── */
 const ADMIN_ID = "mi0XmZ8T3nb5VmZ0tLamS25UHBw1";
 const ADMIN_NAME = "נתן מנדל";
-const ADMIN_PASS = "13791379";
+/* ADMIN_PASS הוסר — הסיסמה עברה לאחסון מגובב בשרת והאימות מתבצע ב-authLogin */
 const SESSION_KEY = "wdc_agent";
 const SESSION_MS = 30 * 24 * 60 * 60 * 1000; /* 30 יום — מסונכרן עם admin.html */
 const QUICK_REPLIES = ["מיד אחזור אליך 🙏","הבנתי, בודק...","תודה רבה!","אשמח לעזור","ניצור קשר בהקדם","עכשיו לא זמין, אחזור"];
@@ -1230,36 +1331,53 @@ async function doLogin() {
   const p = document.getElementById("lp").value;
   const e = document.getElementById("lerr");
   const btn = document.getElementById("login-btn");
+  const t2 = document.getElementById("l2fa");
+  const totp = t2 ? t2.value.trim() : "";
   e.classList.remove("show");
   if (!u || !p) { e.textContent = "נא למלא שם משתמש וסיסמה"; e.classList.add("show"); return; }
   btn.disabled = true;
   try {
-    if (u === ADMIN_NAME && p === ADMIN_PASS) {
-      await finishLogin({ userId: ADMIN_ID, role: "admin", name: ADMIN_NAME, perms: {} });
+    /* האימות מתבצע בשרת — הסיסמה נבדקת מול גיבוב, והתפקיד וההרשאות
+       מוחזרים חתומים בטוקן. אין יותר סיסמה קבועה בקוד. */
+    const res = await window.WDAuth.loginTeam(u, p, totp);
+
+    if (res.needTotp) {
+      btn.disabled = false;
+      document.getElementById("l2fa-wrap").style.display = "";
+      if (t2) { t2.value = ""; t2.focus(); }
+      e.textContent = "נדרש קוד אימות מהאפליקציה";
+      e.classList.add("show");
       return;
     }
-    const tSnap = await get(ref(db, "team"));
-    if (tSnap.exists()) {
-      const td = tSnap.val();
-      const entry = Object.entries(td).find(([, m]) => m.username === u && m.password === p);
-      if (entry) {
-        const [tid, member] = entry;
+
+    if (res.ok && res.profile) {
+      const prof = res.profile, tid = prof.userId;
+      try {
         const sesSnap = await get(ref(db, `sessions/${tid}/mobile`));
         if (sesSnap.exists()) {
           const ses = sesSnap.val();
           const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
           if (ses.deviceToken && saved.deviceToken !== ses.deviceToken) {
             btn.disabled = false;
-            showDeviceConflict(tid, member);
+            showDeviceConflict(tid, { firstName: prof.name, lastName: "", perms: prof.perms || {} });
             return;
           }
         }
-        await finishLogin({ userId: tid, role: "agent", name: `${member.firstName} ${member.lastName}`, perms: member.perms || {} });
-        return;
-      }
+      } catch (_) { /* לא חוסם התחברות */ }
+      await finishLogin({ userId: tid, role: prof.role, name: prof.name, perms: prof.perms || {} });
+      return;
     }
+
     btn.disabled = false;
-    e.textContent = "שם משתמש או סיסמה שגויים";
+    if (res.error === "totp-invalid") {
+      document.getElementById("l2fa-wrap").style.display = "";
+      if (t2) { t2.value = ""; t2.focus(); }
+      e.textContent = "קוד האימות שגוי או פג תוקף";
+    }
+    else if (res.error === "too-many-attempts") e.textContent = "יותר מדי ניסיונות. נסה שוב בעוד מספר דקות.";
+    else if (res.error === "disabled") e.textContent = "המשתמש מושבת";
+    else if (res.error === "network") e.textContent = "שגיאת תקשורת. בדוק את החיבור ונסה שוב.";
+    else e.textContent = "שם משתמש או סיסמה שגויים";
     e.classList.add("show");
   } catch (err) {
     btn.disabled = false;
@@ -1271,6 +1389,9 @@ async function doLogin() {
 async function finishLogin(user) {
   const dt = genToken();
   localStorage.setItem(SESSION_KEY, JSON.stringify({ userId: user.userId, role: user.role, name: user.name, expiry: Date.now() + SESSION_MS, deviceToken: dt }));
+  /* שכבת הזהות: מבססת session אמיתי של Firebase Auth לצד ההתחברות הקיימת.
+         כשל כאן לא חוסם את הכניסה — ההתחברות כבר אושרה למעלה. */
+  if (window._wdPendingCreds) { window.WDAuth.loginTeam(window._wdPendingCreds.u, window._wdPendingCreds.p).catch(()=>{}); window._wdPendingCreds = null; }
   await set(ref(db, `sessions/${user.userId}/mobile`), { deviceToken: dt, loginAt: Date.now() }).catch(() => {});
   document.getElementById("login-btn").disabled = false;
   showLoginSuccess(user.name, () => enterApp(user));
@@ -1418,9 +1539,18 @@ function checkSession() {
   } catch { return null; }
 }
 
-(function restoreSession() {
+(async function restoreSession() {
   const s = checkSession();
   if (!s) return;
+  /* wdAuthGuard — סשן מקומי בלי זהות Firebase מאומתת אינו מספיק.
+     זו בדיוק הפרצה שנסגרה: עד היום הדפדפן "הכריז" על עצמו כמחובר. */
+  const authUser = await window.WDAuth.waitForAuth();
+  if (!authUser) {
+    localStorage.removeItem(SESSION_KEY);
+    const e = document.getElementById("lerr");
+    if (e) { e.textContent = "לצורך שדרוג אבטחה יש להתחבר מחדש. הפרטים שלך לא השתנו."; e.classList.add("show"); }
+    return;
+  }
   get(ref(db, `sessions/${s.userId}/mobile`)).then(snap => {
     if (snap.exists() && snap.val().deviceToken !== s.deviceToken) {
       localStorage.removeItem(SESSION_KEY);
