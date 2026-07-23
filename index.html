@@ -1419,7 +1419,7 @@ async function doLogin() {
           const saved = JSON.parse(localStorage.getItem(SESSION_KEY) || "{}");
           if (ses.deviceToken && saved.deviceToken !== ses.deviceToken) {
             btn.disabled = false;
-            showDeviceConflict(tid, { firstName: prof.name, lastName: "", perms: prof.perms || {} });
+            showDeviceConflict(tid, { role: prof.role, name: prof.name, perms: prof.perms || {} });
             return;
           }
         }
@@ -1476,7 +1476,7 @@ function showDeviceConflict(tid, member) {
   document.getElementById("dc-cancel-btn").onclick = () => ov.remove();
   document.getElementById("dc-force-btn").onclick = async () => {
     ov.remove();
-    await finishLogin({ userId: tid, role: "agent", name: `${member.firstName} ${member.lastName}`, perms: member.perms || {} });
+    await finishLogin({ userId: tid, role: member.role || "agent", name: member.name || "", perms: member.perms || {} });
   };
 }
 
@@ -2264,7 +2264,7 @@ async function sendMsg() {
   const btn = document.getElementById("send-btn"); btn.disabled = true;
   try {
     const key = `msg_${Date.now()}`;
-    const msg = { text, at: Date.now(), sender: "agent", agentRead: true, clientRead: false, agentName: currentUser?.name || "נציג" };
+    const msg = { text, at: Date.now(), sender: "agent", agentRead: true, clientRead: false, agentName: currentUser?.name || "נציג", agentAvatar: myAvatar || "" };
     /* תצוגה מקדימה פעילה נשלחת עם ההודעה; אם המשתמש סגר אותה — הקישור בלבד */
     const wdlField = window.WDLinks.toMessageField(wdlComposer && wdlComposer.get());
     if (wdlField) msg.linkPreview = wdlField;
@@ -2550,7 +2550,7 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
         const now = Date.now(), fresh = cur && (now - (cur.at||0)) < LOCK_TTL_MS;
         const mineHere = cur && cur.id === myId && cur.surface === CHAT_SURFACE;
         if (!force && fresh && !mineHere) return; /* תפוס — ביטול */
-        return { id: myId, name: myName, surface: CHAT_SURFACE, at: now };
+        return { id: myId, name: myName, avatar: myAvatar || "", surface: CHAT_SURFACE, at: now };
       });
       if (!res.committed) return { ok:false, holder: res.snapshot.val() };
       chatLockRef = r;
@@ -2784,7 +2784,7 @@ function fmtSeen(ts) { if (!ts) return ""; const d = new Date(ts); const now = n
         const snapshot=await uploadBytes(sRef(storage,"chat-images/"+curPhone+"/"+Date.now()+"."+ext),file);
         const url=await getDownloadURL(snapshot.ref);
         const key="msg_"+Date.now();
-        const msg={text:caption||"",imageUrl:url,at:Date.now(),sender:"agent",agentRead:true,clientRead:false,agentName:currentUser?.name||"נציג",type:"image"};
+        const msg={text:caption||"",imageUrl:url,at:Date.now(),sender:"agent",agentRead:true,clientRead:false,agentName:currentUser?.name||"נציג",agentAvatar:myAvatar||"",type:"image"};
         if(oneTime){msg.oneTime=true;msg.viewed=false;}
         if(replyTo){msg.replyTo=buildReplyMeta(replyTo);cancelReply();}
         await set(ref(db,"clients/"+curPhone+"/messages/"+key),msg);
