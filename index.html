@@ -111,7 +111,26 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 .bg-swatch-preview{width:100%;aspect-ratio:1;border-radius:14px;border:2px solid var(--bdr);transition:border-color .15s,transform .12s}
 .bg-swatch:active .bg-swatch-preview{transform:scale(.95)}
 .bg-swatch.sel .bg-swatch-preview{border-color:var(--p);box-shadow:0 0 0 3px rgba(59,130,246,.25)}
+.bg-swatch-cat{grid-column:1/-1;font-size:12.5px;font-weight:800;color:var(--txt);margin:2px 2px -4px;padding-top:4px;text-align:right}
+.bg-swatch-cat:first-child{padding-top:0}
 .bg-swatch-name{font-size:11.5px;font-weight:600;color:var(--txt2)}
+/* ── מערכת תמונת פרופיל ── */
+.av-edit-badge{position:absolute;bottom:-2px;left:-2px;width:20px;height:20px;border-radius:50%;background:var(--p);border:2px solid var(--bg1);display:flex;align-items:center;justify-content:center;color:#fff}
+.av-crop-overlay{position:fixed;inset:0;background:rgba(6,10,20,.92);backdrop-filter:blur(8px);z-index:9900;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;user-select:none}
+.av-crop-title{color:#fff;font-size:18px;font-weight:800;margin-bottom:6px;text-align:center}
+.av-crop-sub{color:rgba(255,255,255,.55);font-size:13px;margin-bottom:20px;text-align:center}
+.av-crop-view{position:relative;overflow:hidden;touch-action:none;background:#000;border-radius:12px}
+.av-crop-view img{position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform;-webkit-user-drag:none;pointer-events:none}
+.av-crop-ring{position:absolute;inset:0;border-radius:50%;box-shadow:0 0 0 9999px rgba(6,10,20,.72);pointer-events:none;border:2px solid rgba(255,255,255,.85)}
+.av-crop-zoom{width:min(86vw,360px);margin:20px 0 4px;display:flex;align-items:center;gap:12px;color:rgba(255,255,255,.7)}
+.av-crop-zoom input[type=range]{flex:1;accent-color:var(--p)}
+.av-crop-actions{display:flex;gap:12px;width:min(86vw,360px);margin-top:16px}
+.av-crop-btn{flex:1;border:none;border-radius:14px;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.av-crop-btn.primary{background:linear-gradient(135deg,var(--p),var(--pd));color:#fff}
+.av-crop-btn.ghost{background:rgba(255,255,255,.12);color:#fff}
+.av-crop-btn:disabled{opacity:.55;cursor:default}
+.av-sheet-row{width:100%;background:none;border:none;border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:14px;padding:15px 22px;cursor:pointer;font-family:'Heebo',sans-serif;text-align:start}
+.av-sheet-ic{width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .bg-swatch.sel .bg-swatch-name{color:var(--p)}
 .bg-picker-close{width:100%;margin-top:16px;background:var(--bg2);border:none;border-radius:12px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:12px;cursor:pointer}
 .chat-avatar-sm{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:800;flex-shrink:0;position:relative}
@@ -365,6 +384,7 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 <!-- ════ LIST ════ -->
 <div class="screen" id="s-list">
   <div class="topbar">
+    <button id="my-account-btn" title="החשבון שלי" onclick="openMyAccount()" style="width:36px;height:36px;border-radius:50%;border:none;background:linear-gradient(135deg,var(--p),var(--pd));color:#fff;font-weight:800;font-size:14px;cursor:pointer;overflow:hidden;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:0">א</button>
     <div style="font-size:22px;font-weight:900;flex:1">הודעות</div>
     <button class="icon-btn" id="archive-btn" title="ארכיון">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></svg>
@@ -533,6 +553,8 @@ html,body{height:100%;overflow:hidden;font-family:'Heebo',sans-serif;background:
 </div>
 
 <div id="toast-wrap"></div>
+<input type="file" id="av-file-cam" accept="image/*" capture="user" style="display:none"/>
+<input type="file" id="av-file-gal" accept="image/*" style="display:none"/>
   <div class="img-lightbox" id="img-lightbox">
     <button class="img-lightbox-close" onclick="window.closeLightbox()"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     <div class="lb-loading" id="lb-loading"><svg class="img-gspin" width="40" height="40" viewBox="0 0 50 50"><circle class="img-gspin-track" cx="25" cy="25" r="20" fill="none" stroke-width="5"/><circle class="img-gspin-arc" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="round"/></svg><div class="img-sk-txt">מוריד תמונה מהשרת…</div></div>
@@ -1279,21 +1301,52 @@ function toggleTheme() {
 if (localStorage.getItem("wdc_theme") === "light") { isDark = false; document.body.classList.add("light"); }
 
 /* ── #104 — רקע הצ'אט (נשמר לפי משתמש ב-userPrefs, עוקב בין מכשירים) ── */
+/* קטגוריות הרקע — "כהים" מוצגת ראשונה, ואז "צבעוני", ואז "קלאסי" */
+const CHAT_BG_CATS = [
+  { id: "dark", name: "כהים" },
+  { id: "color", name: "צבעוני" },
+  { id: "classic", name: "קלאסי" },
+];
+/* רקעים מתוך קבצי המקור — כל אחד נאמן לקובץ. רקע חד-מראה: רק light (נופל אליו בכל תמה) */
 const CHAT_BGS = [
-  { id: "default", name: "ברירת מחדל", light: "#f2f6fb", dark: "#0f1826" },
-  { id: "cream", name: "שמנת", light: "#f7f2e9", dark: "#1b1915" },
-  { id: "sky", name: "תכלת", light: "#e9f2fc", dark: "#0d1a2b" },
-  { id: "mint", name: "מנטה", light: "#e9f5ee", dark: "#0e1c16" },
-  { id: "lavender", name: "לבנדר", light: "#f0ecfb", dark: "#151223" },
-  { id: "rose", name: "ורוד", light: "#fbecf1", dark: "#20141a" },
-  { id: "sunset", name: "שקיעה", light: "linear-gradient(160deg,#fdeee2,#f9e3ee)", dark: "linear-gradient(160deg,#241a1e,#191622)" },
-  { id: "ocean", name: "אוקיינוס", light: "linear-gradient(160deg,#e6f0fb,#e4f5f2)", dark: "linear-gradient(160deg,#0d1a2b,#0b1f22)" },
-  { id: "doodle", name: "דוודל",
+  { id: "neon-grid", name: "רקע כהה 1", cat: "dark",
+    light: "repeating-linear-gradient(45deg,rgba(255,20,147,.15) 0,rgba(255,20,147,.15) 2px,transparent 2px,transparent 30px),repeating-linear-gradient(-45deg,rgba(0,255,255,.1) 0,rgba(0,255,255,.1) 1px,transparent 1px,transparent 25px),#0a0a0a" },
+  { id: "dark-green", name: "פסים ירוקים", cat: "dark",
+    light: "repeating-linear-gradient(45deg,rgba(0,255,128,.2) 0px,rgba(0,255,128,0) 2px,transparent 2px,transparent 25px),#0f0f0f" },
+  { id: "dark-orange", name: "פסים חומים", cat: "dark",
+    light: "repeating-linear-gradient(30deg,rgba(255,100,0,.1) 0,rgba(255,100,0,.1) 1px,transparent 1px,transparent 10px,rgba(255,100,0,.15) 11px,rgba(255,100,0,.15) 12px,transparent 12px,transparent 40px),#0f0f0f" },
+  { id: "dark-stripes", name: "פסים שחורים", cat: "dark",
+    light: "repeating-linear-gradient(45deg,#000 0px,#111 2px,#000 4px,#222 6px)" },
+  { id: "dark-pink", name: "פסים ורודים", cat: "dark",
+    light: "repeating-linear-gradient(-45deg,rgba(255,0,100,.2) 0px,rgba(255,0,100,0) 2px,transparent 2px,transparent 25px),#0f0f0f" },
+  { id: "dark-sphere", name: "רשת ספירה", cat: "dark",
+    light: "linear-gradient(to right,rgba(71,85,105,.3) 1px,transparent 1px) 0 0/32px 32px,linear-gradient(to bottom,rgba(71,85,105,.3) 1px,transparent 1px) 0 0/32px 32px,radial-gradient(circle at 50% 50%,rgba(139,92,246,.15) 0%,transparent 70%) 0 0/100% 100%,#020617" },
+  { id: "dark-dots", name: "רשת נקודות", cat: "dark",
+    light: "radial-gradient(circle,rgba(139,92,246,.6) 1px,transparent 1px) 0 0/20px 20px,radial-gradient(circle,rgba(59,130,246,.4) 1px,transparent 1px) 10px 10px/40px 40px,radial-gradient(circle,rgba(236,72,153,.5) 1px,transparent 1px) 30px 30px/60px 60px,#0f172a" },
+  { id: "dark-greengrid", name: "רשת ירוקה", cat: "dark",
+    light: "linear-gradient(90deg,rgba(16,185,129,.25) 1px,transparent 0) 0 0/24px 24px,linear-gradient(180deg,rgba(16,185,129,.25) 1px,transparent 0) 0 0/24px 24px,repeating-linear-gradient(45deg,rgba(16,185,129,.2) 0 2px,transparent 2px 6px) 0 0/24px 24px,#ffffff" },
+  { id: "color-teal", name: "זוהר טורקיז", cat: "color",
+    light: "radial-gradient(125% 125% at 50% 10%,#ffffff 40%,#14b8a6 100%)" },
+  { id: "color-purple", name: "זוהר סגול", cat: "color",
+    light: "radial-gradient(125% 125% at 50% 10%,#fff 40%,#7c3aed 100%)" },
+  { id: "color-slate", name: "זוהר אפור", cat: "color",
+    light: "radial-gradient(125% 125% at 50% 10%,#fff 40%,#475569 100%)" },
+  { id: "color-amber", name: "זוהר ענבר", cat: "color",
+    light: "radial-gradient(125% 125% at 50% 10%,#ffffff 40%,#f59e0b 100%)" },
+  { id: "default", name: "ברירת מחדל", cat: "classic", light: "#f2f6fb", dark: "#0f1826" },
+  { id: "cream", name: "שמנת", cat: "classic", light: "#f7f2e9", dark: "#1b1915" },
+  { id: "sky", name: "תכלת", cat: "classic", light: "#e9f2fc", dark: "#0d1a2b" },
+  { id: "mint", name: "מנטה", cat: "classic", light: "#e9f5ee", dark: "#0e1c16" },
+  { id: "lavender", name: "לבנדר", cat: "classic", light: "#f0ecfb", dark: "#151223" },
+  { id: "rose", name: "ורוד", cat: "classic", light: "#fbecf1", dark: "#20141a" },
+  { id: "sunset", name: "שקיעה", cat: "classic", light: "linear-gradient(160deg,#fdeee2,#f9e3ee)", dark: "linear-gradient(160deg,#241a1e,#191622)" },
+  { id: "ocean", name: "אוקיינוס", cat: "classic", light: "linear-gradient(160deg,#e6f0fb,#e4f5f2)", dark: "linear-gradient(160deg,#0d1a2b,#0b1f22)" },
+  { id: "doodle", name: "דוודל", cat: "classic",
     light: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cg fill='none' stroke='%23000' stroke-opacity='0.05' stroke-width='1.4'%3E%3Ccircle cx='12' cy='12' r='3.5'/%3E%3Cpath d='M33 7v9M28.5 11.5h9'/%3E%3Cpath d='M7 34h9M34 30v9'/%3E%3C/g%3E%3C/svg%3E") repeat, #f2f6fb`,
     dark: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='48' height='48'%3E%3Cg fill='none' stroke='%23fff' stroke-opacity='0.05' stroke-width='1.4'%3E%3Ccircle cx='12' cy='12' r='3.5'/%3E%3Cpath d='M33 7v9M28.5 11.5h9'/%3E%3Cpath d='M7 34h9M34 30v9'/%3E%3C/g%3E%3C/svg%3E") repeat, #10192a` },
 ];
 let currentChatBg = "default";
-function bgValue(bg) { return isDark ? bg.dark : bg.light; }
+function bgValue(bg) { return (isDark ? bg.dark : bg.light) || bg.light; }
 function applyChatBg(id) {
   currentChatBg = id || "default";
   const bg = CHAT_BGS.find(b => b.id === currentChatBg) || CHAT_BGS[0];
@@ -1304,10 +1357,17 @@ function listenChatBg(user) {
   if (!user?.userId) return;
   onValue(ref(db, `userPrefs/${user.userId}/chatBg`), snap => { applyChatBg(snap.val() || "default"); });
 }
+function bgSwatchHTML() {
+  return CHAT_BG_CATS.map(cat => {
+    const items = CHAT_BGS.filter(b => (b.cat || "classic") === cat.id);
+    if (!items.length) return "";
+    return `<div class="bg-swatch-cat">${cat.name}</div>` + items.map(b =>
+      `<button class="bg-swatch${b.id === currentChatBg ? " sel" : ""}" data-id="${b.id}" onclick="pickChatBg('${b.id}')"><span class="bg-swatch-preview" style="background:${bgValue(b)}"></span><span class="bg-swatch-name">${b.name}</span></button>`).join("");
+  }).join("");
+}
 window.openBgPicker = () => {
   document.getElementById("chat-opts-menu").classList.remove("show");
-  document.getElementById("bg-swatch-grid").innerHTML = CHAT_BGS.map(b =>
-    `<button class="bg-swatch${b.id === currentChatBg ? " sel" : ""}" data-id="${b.id}" onclick="pickChatBg('${b.id}')"><span class="bg-swatch-preview" style="background:${bgValue(b)}"></span><span class="bg-swatch-name">${b.name}</span></button>`).join("");
+  document.getElementById("bg-swatch-grid").innerHTML = bgSwatchHTML();
   document.getElementById("bg-picker-overlay").classList.add("show");
 };
 window.closeBgPicker = () => document.getElementById("bg-picker-overlay").classList.remove("show");
@@ -1428,12 +1488,224 @@ function showLoginSuccess(name, done) {
   setTimeout(() => { ov.style.display = "none"; done && done(); }, 1400);
 }
 
+/* ════ מערכת תמונת פרופיל (הנציג/מנהל המחובר) — עריכת החשבון שלי ════ */
+const AV_MALE = [{"id": "m1", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNlZmY2ZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzNiODJmNiIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjM2I4MmY2IiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05db\u05d7\u05d5\u05dc"}, {"id": "m2", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNlY2ZkZjUiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzEwYjk4MSIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjMTBiOTgxIiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05d9\u05e8\u05d5\u05e7"}, {"id": "m3", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZmZiZWIiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2Y1OWUwYiIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjZjU5ZTBiIiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05db\u05ea\u05d5\u05dd"}, {"id": "m4", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmNWYzZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzhiNWNmNiIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjOGI1Y2Y2IiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05e1\u05d2\u05d5\u05dc"}, {"id": "m5", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZWYyZjIiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2VmNDQ0NCIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjZWY0NDQ0IiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05d0\u05d3\u05d5\u05dd"}, {"id": "m6", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNlY2ZlZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzA2YjZkNCIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjMDZiNmQ0IiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05e6\u05d9\u05d0\u05df"}, {"id": "m7", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZmY3ZWQiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2Y5NzMxNiIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjZjk3MzE2IiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05db\u05ea\u05d5\u05dd2"}, {"id": "m8", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmN2ZlZTciLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzg0Y2MxNiIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjODRjYzE2IiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05d9\u05e8\u05d5\u05e72"}, {"id": "m9", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZGYyZjgiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2VjNDg5OSIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjZWM0ODk5IiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05d5\u05e8\u05d5\u05d3"}, {"id": "m10", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNlZWYyZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzYzNjZmMSIgb3BhY2l0eT0iLjg1Ii8+PGVsbGlwc2UgY3g9IjQwIiBjeT0iNjUiIHJ4PSIyMCIgcnk9IjE0IiBmaWxsPSIjNjM2NmYxIiBvcGFjaXR5PSIuNyIvPjxjaXJjbGUgY3g9IjM0IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48Y2lyY2xlIGN4PSI0NiIgY3k9IjI3IiByPSIyIiBmaWxsPSIjZmZmIi8+PHBhdGggZD0iTTM1IDM1IFE0MCAzOSA0NSAzNSIgc3Ryb2tlPSIjZmZmIiBzdHJva2Utd2lkdGg9IjIiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPg==", "label": "\u05d0\u05d9\u05e0\u05d3\u05d9\u05d2\u05d5"}];
+const AV_FEMALE = [{"id": "f1", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZGYyZjgiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2RiMjc3NyIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iI2RiMjc3NyIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiNkYjI3NzciIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05d5\u05e8\u05d5\u05d3"}, {"id": "f2", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmNWYzZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzdjM2FlZCIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iIzdjM2FlZCIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiM3YzNhZWQiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05e1\u05d2\u05d5\u05dc"}, {"id": "f3", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNlY2ZlZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzA4OTFiMiIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iIzA4OTFiMiIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiMwODkxYjIiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05e6\u05d9\u05d0\u05df"}, {"id": "f4", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZmZiZWIiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2Q5NzcwNiIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iI2Q5NzcwNiIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiNkOTc3MDYiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05e2\u05e0\u05d1\u05e8"}, {"id": "f5", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmMGZkZjQiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzE2YTM0YSIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iIzE2YTM0YSIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiMxNmEzNGEiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05d9\u05e8\u05d5\u05e7"}, {"id": "f6", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZWYyZjIiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2RjMjYyNiIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iI2RjMjYyNiIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiNkYzI2MjYiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05d0\u05d3\u05d5\u05dd"}, {"id": "f7", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNlZmY2ZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzI1NjNlYiIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iIzI1NjNlYiIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiMyNTYzZWIiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05db\u05d7\u05d5\u05dc"}, {"id": "f8", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmYWY1ZmYiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzkzMzNlYSIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iIzkzMzNlYSIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiM5MzMzZWEiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05e1\u05d2\u05d5\u05dc2"}, {"id": "f9", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmMGZkZmEiLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iIzBkOTQ4OCIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iIzBkOTQ4OCIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiMwZDk0ODgiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05ea\u05db\u05dc\u05ea"}, {"id": "f10", "url": "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgODAgODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PGNpcmNsZSBjeD0iNDAiIGN5PSI0MCIgcj0iNDAiIGZpbGw9IiNmZWYzYzciLz48Y2lyY2xlIGN4PSI0MCIgY3k9IjMwIiByPSIxNCIgZmlsbD0iI2I0NTMwOSIgb3BhY2l0eT0iLjg1Ii8+PHBhdGggZD0iTTI2IDMwIFEyNCA1MCAyNiA2MCBRMzAgNjUgNDAgNjUgUTUwIDY1IDU0IDYwIFE1NiA1MCA1NCAzMCIgZmlsbD0iI2I0NTMwOSIgb3BhY2l0eT0iLjQiLz48ZWxsaXBzZSBjeD0iNDAiIGN5PSI2NSIgcng9IjIwIiByeT0iMTQiIGZpbGw9IiNiNDUzMDkiIG9wYWNpdHk9Ii43Ii8+PGNpcmNsZSBjeD0iMzQiIGN5PSIyNyIgcj0iMiIgZmlsbD0iI2ZmZiIvPjxjaXJjbGUgY3g9IjQ2IiBjeT0iMjciIHI9IjIiIGZpbGw9IiNmZmYiLz48cGF0aCBkPSJNMzUgMzUgUTQwIDM5IDQ1IDM1IiBzdHJva2U9IiNmZmYiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+PC9zdmc+", "label": "\u05d7\u05d5\u05dd"}];
+let avUploading = false, myAvatar = "";
+const _AVSVG = {
+  cam:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>`,
+  img:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+  usr:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-3.3 3.6-6 8-6s8 2.7 8 6"/></svg>`,
+  trash:`<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>`,
+  male:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="14" r="6"/><line x1="14.5" y1="9.5" x2="20" y2="4"/><polyline points="15 4 20 4 20 9"/></svg>`,
+  female:`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="6"/><line x1="12" y1="14" x2="12" y2="22"/><line x1="9" y1="19" x2="15" y2="19"/></svg>`,
+  spin:`<svg class="img-gspin" width="20" height="20" viewBox="0 0 50 50"><circle class="img-gspin-track" cx="25" cy="25" r="20" fill="none" stroke-width="5"/><circle class="img-gspin-arc" cx="25" cy="25" r="20" fill="none" stroke-width="5" stroke-linecap="round"/></svg>`
+};
+const AV_CFG = {
+  getCurrent: () => myAvatar || "",
+  save: async (url) => { if (!currentUser || !currentUser.userId) return; await set(ref(db, `team/${currentUser.userId}/avatar`), url); },
+  storagePath: () => "chat-images/avatars/team/" + currentUser.userId + "/" + Date.now() + ".jpg",
+  afterSave: () => renderMyAvatar()
+};
+function avInner(url, initial) {
+  return url ? `<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:inherit" onerror="this.style.display='none'"/>` : initial;
+}
+function renderMyAvatar() {
+  const initial = ((currentUser && currentUser.name) || "נ").charAt(0);
+  const inner = avInner(myAvatar, initial);
+  const b = document.getElementById("my-account-btn"); if (b) b.innerHTML = inner;
+  const m = document.getElementById("my-acc-av"); if (m) m.innerHTML = inner;
+}
+function listenMyAvatar(user) {
+  if (!user || !user.userId) return;
+  onValue(ref(db, `team/${user.userId}/avatar`), snap => { myAvatar = snap.val() || ""; renderMyAvatar(); });
+}
+window.openMyAccount = () => {
+  if (!currentUser) return;
+  document.getElementById("my-acc-overlay")?.remove();
+  const ov = document.createElement("div");
+  ov.id = "my-acc-overlay";
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(6,10,20,.7);backdrop-filter:blur(6px);z-index:9700;display:flex;align-items:flex-end;justify-content:center";
+  const nameEl = document.createElement("div"); nameEl.textContent = currentUser.name || "משתמש";
+  const role = currentUser.role === "admin" ? "מנהל" : "נציג";
+  const initial = ((currentUser.name) || "נ").charAt(0);
+  ov.innerHTML = `
+    <div style="background:var(--bg1);border-radius:20px 20px 0 0;width:100%;max-width:520px;padding:0 0 calc(24px + var(--safe-bot))">
+      <div style="width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:12px auto 6px"></div>
+      <div style="padding:6px 20px 18px;display:flex;align-items:center;justify-content:space-between">
+        <div style="font-size:18px;font-weight:800;color:var(--txt)">החשבון שלי</div>
+        <button id="my-acc-close" style="background:var(--bg2);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;padding:0 20px 20px">
+        <div style="position:relative;cursor:pointer;flex-shrink:0" onclick="openAvatarPicker()">
+          <div id="my-acc-av" style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--p),var(--pd));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:24px;overflow:hidden">${avInner(myAvatar, initial)}</div>
+          <span class="av-edit-badge">${_AVSVG.cam.replace('width="20" height="20"','width="11" height="11"')}</span>
+        </div>
+        <div style="min-width:0"><div id="my-acc-name" style="font-size:16px;font-weight:800;color:var(--txt)"></div><div style="font-size:13px;color:var(--txt2)">${role}</div></div>
+      </div>
+      <div style="padding:0 20px">
+        <button onclick="openAvatarPicker()" style="width:100%;background:linear-gradient(135deg,var(--p),var(--pd));border:none;border-radius:14px;color:#fff;font-family:'Heebo',sans-serif;font-size:15px;font-weight:700;padding:13px;cursor:pointer">שנה תמונת פרופיל</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.querySelector("#my-acc-name").textContent = nameEl.textContent;
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  ov.querySelector("#my-acc-close").onclick = () => ov.remove();
+};
+window.openAvatarPicker = () => {
+  if (!currentUser || !currentUser.userId) return;
+  const hasAv = !!AV_CFG.getCurrent();
+  document.getElementById("av-action-overlay")?.remove();
+  const ov = document.createElement("div");
+  ov.id = "av-action-overlay";
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(6,10,20,.7);backdrop-filter:blur(6px);z-index:9900;display:flex;align-items:flex-end;justify-content:center";
+  const row = (id, bg, fg, svg, label) => `<button id="${id}" class="av-sheet-row"><span class="av-sheet-ic" style="background:${bg};color:${fg}">${svg}</span><span style="font-size:15px;font-weight:600;color:var(--txt)">${label}</span></button>`;
+  ov.innerHTML = `
+    <div style="background:var(--bg1);border-radius:20px 20px 0 0;width:100%;max-width:520px;overflow:hidden;padding-bottom:calc(16px + var(--safe-bot))">
+      <div style="width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:12px auto 6px"></div>
+      <div style="padding:8px 22px 12px;font-size:18px;font-weight:800;color:var(--txt)">תמונת פרופיל</div>
+      ${row("av-act-cam","rgba(59,130,246,.14)","var(--p)",_AVSVG.cam,"צילום תמונה")}
+      ${row("av-act-gal","rgba(167,139,250,.16)","var(--pur)",_AVSVG.img,"העלאה מהמכשיר")}
+      ${row("av-act-lib","rgba(34,197,94,.14)","var(--ok)",_AVSVG.usr,"בחירת אווטאר")}
+      ${hasAv ? row("av-act-rm","rgba(239,68,68,.14)","var(--err)",_AVSVG.trash,"הסרת התמונה") : ""}
+      <div style="padding:14px 22px 0"><button id="av-act-cancel" style="width:100%;background:var(--bg2);border:1.5px solid var(--bdr);border-radius:12px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:15px;font-weight:600;padding:13px;cursor:pointer">ביטול</button></div>
+    </div>`;
+  document.body.appendChild(ov);
+  const close = () => ov.remove();
+  ov.onclick = e => { if (e.target === ov) close(); };
+  ov.querySelector("#av-act-cancel").onclick = close;
+  ov.querySelector("#av-act-cam").onclick = () => { close(); pickAvatarFile("av-file-cam"); };
+  ov.querySelector("#av-act-gal").onclick = () => { close(); pickAvatarFile("av-file-gal"); };
+  ov.querySelector("#av-act-lib").onclick = () => { close(); openAvatarLibrary(); };
+  const rm = ov.querySelector("#av-act-rm"); if (rm) rm.onclick = () => { close(); removeAvatar(); };
+};
+function pickAvatarFile(inputId) {
+  const inp = document.getElementById(inputId); if (!inp) return;
+  if (!inp._wired) { inp.addEventListener("change", e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) openAvatarCropper(f); }); inp._wired = true; }
+  inp.click();
+}
+window.openAvatarLibrary = () => {
+  document.getElementById("av-lib-overlay")?.remove();
+  const ov = document.createElement("div");
+  ov.id = "av-lib-overlay";
+  ov.style.cssText = "position:fixed;inset:0;background:rgba(6,10,20,.7);backdrop-filter:blur(6px);z-index:9910;display:flex;align-items:flex-end;justify-content:center";
+  ov.innerHTML = `
+    <div style="background:var(--bg1);border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:85dvh;overflow-y:auto;padding:0 0 calc(28px + var(--safe-bot))">
+      <div style="width:40px;height:4px;background:var(--bdr);border-radius:2px;margin:12px auto 16px"></div>
+      <div style="padding:0 20px 16px;display:flex;align-items:center;gap:10px">
+        <button id="av-lib-back" style="background:var(--bg2);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg></button>
+        <div style="font-size:18px;font-weight:800;flex:1;color:var(--txt)">בחירת אווטאר</div>
+        <button id="av-lib-close" style="background:var(--bg2);border:none;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--txt2)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+      </div>
+      <div style="display:flex;gap:8px;padding:0 20px 16px">
+        <button id="av-tab-m" onclick="showAvTab('male')" style="flex:1;background:var(--p);border:none;border-radius:20px;color:#fff;font-family:'Heebo',sans-serif;font-size:14px;font-weight:700;padding:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">${_AVSVG.male} זכר</button>
+        <button id="av-tab-f" onclick="showAvTab('female')" style="flex:1;background:var(--bg2);border:1.5px solid var(--bdr);border-radius:20px;color:var(--txt2);font-family:'Heebo',sans-serif;font-size:14px;font-weight:600;padding:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px">${_AVSVG.female} נקבה</button>
+      </div>
+      <div id="av-grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:0 20px"></div>
+    </div>`;
+  document.body.appendChild(ov);
+  ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  ov.querySelector("#av-lib-close").onclick = () => ov.remove();
+  ov.querySelector("#av-lib-back").onclick = () => { ov.remove(); openAvatarPicker(); };
+  showAvTab("male");
+};
+window.showAvTab = (gender) => {
+  const grid = document.getElementById("av-grid"); if (!grid) return;
+  const curAv = AV_CFG.getCurrent();
+  const mBtn = document.getElementById("av-tab-m"), fBtn = document.getElementById("av-tab-f");
+  if (mBtn) { mBtn.style.background = gender === "male" ? "var(--p)" : "var(--bg2)"; mBtn.style.color = gender === "male" ? "#fff" : "var(--txt2)"; mBtn.style.border = gender === "male" ? "none" : "1.5px solid var(--bdr)"; }
+  if (fBtn) { fBtn.style.background = gender === "female" ? "var(--p)" : "var(--bg2)"; fBtn.style.color = gender === "female" ? "#fff" : "var(--txt2)"; fBtn.style.border = gender === "female" ? "none" : "1.5px solid var(--bdr)"; }
+  const list = gender === "male" ? AV_MALE : AV_FEMALE;
+  grid.innerHTML = list.map((a, i) => {
+    const sel = curAv === a.url;
+    return `<div data-gender="${gender}" data-idx="${i}" class="av-pick-item" style="cursor:pointer;border-radius:16px;overflow:hidden;border:3px solid ${sel ? "var(--p)" : "transparent"};background:var(--bg2);aspect-ratio:1;display:flex;align-items:center;justify-content:center;position:relative"><img src="${a.url}" style="width:100%;height:100%;object-fit:cover;border-radius:13px"/>${sel ? `<div style="position:absolute;bottom:4px;right:4px;width:18px;height:18px;border-radius:50%;background:var(--p);display:flex;align-items:center;justify-content:center"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>` : ""}</div>`;
+  }).join("");
+  grid.querySelectorAll(".av-pick-item").forEach(el => { el.onclick = () => { const g = el.dataset.gender, i = parseInt(el.dataset.idx); selectAvatar((g === "male" ? AV_MALE : AV_FEMALE)[i].url); }; });
+};
+window.selectAvatar = async (url) => {
+  await AV_CFG.save(url);
+  document.getElementById("av-lib-overlay")?.remove();
+  document.getElementById("av-action-overlay")?.remove();
+  AV_CFG.afterSave(url);
+  toast("תמונת הפרופיל עודכנה");
+};
+window.removeAvatar = async () => {
+  await AV_CFG.save(null);
+  document.getElementById("av-lib-overlay")?.remove();
+  document.getElementById("av-action-overlay")?.remove();
+  AV_CFG.afterSave("");
+  toast("התמונה הוסרה");
+};
+window.openAvatarCropper = (file) => {
+  if (!file || !/^image\//.test(file.type)) { toast("קובץ לא נתמך — בחר תמונה"); return; }
+  const objUrl = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => buildAvatarCropper(img, objUrl);
+  img.onerror = () => { URL.revokeObjectURL(objUrl); toast("שגיאה בטעינת התמונה"); };
+  img.src = objUrl;
+};
+function buildAvatarCropper(img, objUrl) {
+  const V = Math.round(Math.min(window.innerWidth * 0.82, 320));
+  const nw = img.naturalWidth, nh = img.naturalHeight;
+  if (!nw || !nh) { URL.revokeObjectURL(objUrl); toast("שגיאה בטעינת התמונה"); return; }
+  const minScale = V / Math.min(nw, nh), maxScale = minScale * 4;
+  let scale = minScale, tx = (V - nw * scale) / 2, ty = (V - nh * scale) / 2;
+  const ov = document.createElement("div");
+  ov.className = "av-crop-overlay";
+  ov.innerHTML = `
+    <div class="av-crop-title">מיקום תמונת הפרופיל</div>
+    <div class="av-crop-sub">גרירה למיקום · צביטה או מחוון לזום</div>
+    <div class="av-crop-view" id="av-cv" style="width:${V}px;height:${V}px"><img id="av-cimg" src="${objUrl}" style="width:${nw}px;height:${nh}px"/><div class="av-crop-ring"></div></div>
+    <div class="av-crop-zoom"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg><input type="range" id="av-zoom" min="1" max="4" step="0.01" value="1"/><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg></div>
+    <div class="av-crop-actions"><button class="av-crop-btn ghost" id="av-crop-cancel">ביטול</button><button class="av-crop-btn primary" id="av-crop-confirm">אישור</button></div>`;
+  document.body.appendChild(ov);
+  const imgEl = ov.querySelector("#av-cimg"), view = ov.querySelector("#av-cv"), zoom = ov.querySelector("#av-zoom");
+  const cancelBtn = ov.querySelector("#av-crop-cancel"), confirmBtn = ov.querySelector("#av-crop-confirm");
+  const clamp = () => { scale = Math.max(minScale, Math.min(maxScale, scale)); tx = Math.min(0, Math.max(V - nw * scale, tx)); ty = Math.min(0, Math.max(V - nh * scale, ty)); };
+  const render = () => { clamp(); imgEl.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`; };
+  const setScaleAround = (ns, cx, cy) => { ns = Math.max(minScale, Math.min(maxScale, ns)); const k = ns / scale; tx = cx - (cx - tx) * k; ty = cy - (cy - ty) * k; scale = ns; render(); zoom.value = (scale / minScale).toFixed(2); };
+  render();
+  zoom.oninput = () => setScaleAround(minScale * parseFloat(zoom.value), V / 2, V / 2);
+  const pts = new Map(); let startDist = 0, startScale = scale, startMid = { x: 0, y: 0 };
+  view.addEventListener("pointerdown", e => { view.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 2) { const p = [...pts.values()]; startDist = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); startScale = scale; const r = view.getBoundingClientRect(); startMid = { x: (p[0].x + p[1].x) / 2 - r.left, y: (p[0].y + p[1].y) / 2 - r.top }; } });
+  view.addEventListener("pointermove", e => { if (!pts.has(e.pointerId)) return; const prev = pts.get(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 1) { tx += e.clientX - prev.x; ty += e.clientY - prev.y; render(); } else if (pts.size === 2) { const p = [...pts.values()]; const d = Math.hypot(p[0].x - p[1].x, p[0].y - p[1].y); if (startDist) setScaleAround(startScale * (d / startDist), startMid.x, startMid.y); } });
+  const upP = e => { pts.delete(e.pointerId); };
+  view.addEventListener("pointerup", upP); view.addEventListener("pointercancel", upP);
+  view.addEventListener("wheel", e => { e.preventDefault(); const r = view.getBoundingClientRect(); setScaleAround(scale * (e.deltaY < 0 ? 1.08 : 0.926), e.clientX - r.left, e.clientY - r.top); }, { passive: false });
+  const closeCropper = () => { URL.revokeObjectURL(objUrl); ov.remove(); };
+  cancelBtn.onclick = () => { if (avUploading) return; closeCropper(); };
+  ov.addEventListener("click", e => { if (e.target === ov && !avUploading) closeCropper(); });
+  confirmBtn.onclick = async () => {
+    if (avUploading) return;
+    avUploading = true; confirmBtn.disabled = true; cancelBtn.disabled = true;
+    const orig = confirmBtn.innerHTML; confirmBtn.innerHTML = `${_AVSVG.spin}<span>מעלה…</span>`;
+    try {
+      const OUT = 512; const canvas = document.createElement("canvas"); canvas.width = OUT; canvas.height = OUT;
+      const ctx = canvas.getContext("2d");
+      const srcW = V / scale, srcH = V / scale, srcX = -tx / scale, srcY = -ty / scale;
+      ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, OUT, OUT);
+      const blob = await new Promise((res, rej) => canvas.toBlob(b => b ? res(b) : rej(new Error("blob")), "image/jpeg", 0.9));
+      const snap = await uploadBytes(sRef(storage, AV_CFG.storagePath()), blob);
+      const dlUrl = await getDownloadURL(snap.ref);
+      await AV_CFG.save(dlUrl);
+      AV_CFG.afterSave(dlUrl);
+      closeCropper();
+      document.getElementById("av-action-overlay")?.remove();
+      document.getElementById("av-lib-overlay")?.remove();
+      toast("תמונת הפרופיל עודכנה");
+    } catch (err) { console.error(err); confirmBtn.disabled = false; cancelBtn.disabled = false; confirmBtn.innerHTML = orig; toast("שגיאה בהעלאה, נסה שוב"); }
+    finally { avUploading = false; }
+  };
+}
+
 function enterApp(user) {
   currentUser = user;
   setupAgentPresence(user);
   listenMySession(user);
   checkPermNotify(user);
   listenChatBg(user); /* #104 — טעינת רקע לפי המשתמש */
+  listenMyAvatar(user); /* טעינת תמונת הפרופיל של המשתמש */
+  renderMyAvatar();
   const canChat = user.role === "admin" || !!user.perms?.chat;
   if (!canChat) { showNoChatPermission(user); return; }
   wdlSetup(); /* מנגנון הקישורים — חיווט השדה וטעינת העדפת האזהרה מהשרת */
