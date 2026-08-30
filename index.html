@@ -1448,7 +1448,9 @@ const CHAT_BGS = [
     light: "radial-gradient(125% 125% at 50% 10%,#fff 40%,#475569 100%)" },
   { id: "color-amber", name: "זוהר ענבר", cat: "color",
     light: "radial-gradient(125% 125% at 50% 10%,#ffffff 40%,#f59e0b 100%)" },
-  { id: "default", name: "ברירת מחדל", cat: "classic", light: "#f2f6fb", dark: "#0f1826" },
+  { id: "default", name: "ברירת מחדל", cat: "classic",
+    light: `url("chat-bg-doodle-light.svg") 0 0/270px repeat, #e5ddd5`,
+    dark: `url("chat-bg-doodle-dark.svg") 0 0/270px repeat, #0b141a` },
   { id: "cream", name: "שמנת", cat: "classic", light: "#f7f2e9", dark: "#1b1915" },
   { id: "sky", name: "תכלת", cat: "classic", light: "#e9f2fc", dark: "#0d1a2b" },
   { id: "mint", name: "מנטה", cat: "classic", light: "#e9f5ee", dark: "#0e1c16" },
@@ -1526,6 +1528,13 @@ async function doLogin() {
     }
 
     if (res.ok && res.profile) {
+      /* בלי זהות Firebase חתומה אין גישה למסד — עוצרים בקול במקום אפליקציה ריקה */
+      if (res.signedIn === false) {
+        btn.disabled = false;
+        e.textContent = "ההתחברות לא הושלמה. רעננו את הדף ונסו שוב.";
+        e.classList.add("show");
+        return;
+      }
       const prof = res.profile, tid = prof.userId;
       try {
         const sesSnap = await get(ref(db, `sessions/${tid}/mobile`));
@@ -1912,7 +1921,8 @@ function doLogout() {
     set(ref(db, `team/${currentUser.userId}/presence`), { online: false, lastSeen: Date.now() }).catch(() => {});
   }
   localStorage.removeItem(SESSION_KEY);
-  location.reload();
+  /* ניתוק גם מזהות Firebase — ה-reload ממתין לסיום כדי שלא יקטע אותו */
+  Promise.resolve().then(() => window.WDAuth.signOut()).catch(() => {}).then(() => location.reload());
 }
 
 function checkSession() {
